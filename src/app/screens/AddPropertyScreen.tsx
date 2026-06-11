@@ -23,8 +23,12 @@ import { generateId } from '../../utils/uuid';
 const FormSchema = z.object({
   title: z.string().min(1, 'Vui lòng nhập tên nhà/căn hộ'),
   addressLine: z.string().min(1, 'Vui lòng nhập địa chỉ'),
-  ward: z.string().optional(),
-  city: z.string().optional(),
+  ward: z.string().min(1, 'Vui lòng nhập phường/xã'),
+  city: z.string().min(1, 'Vui lòng nhập tỉnh/thành phố'),
+  maxCapacity: z.string().min(1, 'Vui lòng nhập sức chứa').refine(val => {
+    const num = parseInt(val, 10);
+    return !isNaN(num) && num > 0;
+  }, 'Sức chứa tối đa phải lớn hơn 0'),
   note: z.string().optional(),
 });
 
@@ -48,6 +52,7 @@ export function AddPropertyScreen() {
       addressLine: '',
       ward: '',
       city: 'TP Hồ Chí Minh',
+      maxCapacity: '5',
       note: '',
     },
   });
@@ -85,6 +90,7 @@ export function AddPropertyScreen() {
       ...data,
       id: generateId(),
       fullAddress: `${data.addressLine}, ${data.ward ? data.ward + ', ' : ''}${data.city}`,
+      maxCapacity: data.maxCapacity ? parseInt(data.maxCapacity, 10) : undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -117,7 +123,7 @@ export function AddPropertyScreen() {
             <Text style={styles.sectionTitle}>Thông tin nhà</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Tên khu trọ / Số nhà *</Text>
+              <Text style={styles.label}>Tên khu trọ / Số nhà <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
               <Controller
                 control={control}
                 name="title"
@@ -137,7 +143,7 @@ export function AddPropertyScreen() {
             </View>
 
             <View style={[styles.inputGroup, { zIndex: 10 }]}>
-              <Text style={styles.label}>Địa chỉ (Đường/Hẻm) *</Text>
+              <Text style={styles.label}>Địa chỉ (Đường/Hẻm) <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
               <Controller
                 control={control}
                 name="addressLine"
@@ -191,13 +197,13 @@ export function AddPropertyScreen() {
                   { flex: 1, marginRight: Theme.spacing.sm },
                 ]}
               >
-                <Text style={styles.label}>Phường/Xã</Text>
+                <Text style={styles.label}>Phường/Xã <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
                 <Controller
                   control={control}
                   name="ward"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, errors.ward && styles.inputError]}
                       placeholder="VD: Linh Xuân"
                       onBlur={onBlur}
                       onChangeText={onChange}
@@ -205,6 +211,9 @@ export function AddPropertyScreen() {
                     />
                   )}
                 />
+                {errors.ward && (
+                  <Text style={styles.errorText}>{errors.ward.message}</Text>
+                )}
               </View>
 
               <View
@@ -213,13 +222,13 @@ export function AddPropertyScreen() {
                   { flex: 1, marginLeft: Theme.spacing.sm },
                 ]}
               >
-                <Text style={styles.label}>Tỉnh/Thành phố</Text>
+                <Text style={styles.label}>Tỉnh/Thành phố <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
                 <Controller
                   control={control}
                   name="city"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, errors.city && styles.inputError]}
                       placeholder="VD: TP Hồ Chí Minh"
                       onBlur={onBlur}
                       onChangeText={onChange}
@@ -227,7 +236,31 @@ export function AddPropertyScreen() {
                     />
                   )}
                 />
+                {errors.city && (
+                  <Text style={styles.errorText}>{errors.city.message}</Text>
+                )}
               </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Số người ở tối đa <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
+              <Controller
+                control={control}
+                name="maxCapacity"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={[styles.input, errors.maxCapacity && styles.inputError]}
+                    placeholder="VD: 5"
+                    keyboardType="number-pad"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
+              />
+              {errors.maxCapacity && (
+                <Text style={styles.errorText}>{errors.maxCapacity.message}</Text>
+              )}
             </View>
           </View>
         </ScrollView>

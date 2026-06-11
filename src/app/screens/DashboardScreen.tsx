@@ -1,5 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, ScrollView, Text, TouchableOpacity, TextInput, FlatList, Modal } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  FlatList,
+  Modal,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
@@ -20,12 +29,26 @@ export function DashboardScreen() {
   const { properties } = useProperties();
 
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return { people: [], properties: [], contracts: [] };
+    if (!searchQuery.trim())
+      return { people: [], properties: [], contracts: [] };
     const q = searchQuery.toLowerCase();
     return {
-      people: people.filter(p => p.fullName.toLowerCase().includes(q) || p.nationalId?.includes(q) || p.phone?.includes(q)),
-      properties: properties.filter(p => p.title.toLowerCase().includes(q) || p.fullAddress?.toLowerCase().includes(q)),
-      contracts: contracts.filter(c => c.govContractId?.toLowerCase().includes(q) || c.id.toLowerCase().includes(q))
+      people: people.filter(
+        p =>
+          p.fullName.toLowerCase().includes(q) ||
+          p.nationalId?.includes(q) ||
+          p.phone?.includes(q),
+      ),
+      properties: properties.filter(
+        p =>
+          p.title.toLowerCase().includes(q) ||
+          p.fullAddress?.toLowerCase().includes(q),
+      ),
+      contracts: contracts.filter(
+        c =>
+          c.govContractId?.toLowerCase().includes(q) ||
+          c.id.toLowerCase().includes(q),
+      ),
     };
   }, [searchQuery, people, properties, contracts]);
 
@@ -35,12 +58,19 @@ export function DashboardScreen() {
 
   const notifications = [
     { id: '1', message: '2 hợp đồng sắp hết hạn', type: 'warning' as const },
-    { id: '2', message: '1 khách thuê chưa khai báo tạm trú', type: 'danger' as const },
+    {
+      id: '2',
+      message: '1 khách thuê chưa khai báo tạm trú',
+      type: 'danger' as const,
+    },
   ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Xin chào,</Text>
@@ -66,7 +96,10 @@ export function DashboardScreen() {
               returnKeyType="search"
             />
           </View>
-          <TouchableOpacity style={styles.bellButton} onPress={() => setShowNotifications(true)}>
+          <TouchableOpacity
+            style={styles.bellButton}
+            onPress={() => setShowNotifications(true)}
+          >
             <Text style={{ fontSize: 20 }}>🔔</Text>
             {notifications.length > 0 && (
               <View style={styles.badge}>
@@ -75,20 +108,30 @@ export function DashboardScreen() {
             )}
           </TouchableOpacity>
         </View>
-        
+
         {searchQuery.trim().length > 0 ? (
           <View style={styles.searchResultsContainer}>
             <Text style={styles.sectionTitle}>Kết quả tìm kiếm</Text>
-            
+
             {searchResults.people.length > 0 && (
               <View style={styles.resultGroup}>
-                <Text style={styles.resultGroupTitle}>Khách thuê ({searchResults.people.length})</Text>
+                <Text style={styles.resultGroupTitle}>
+                  Khách thuê ({searchResults.people.length})
+                </Text>
                 {searchResults.people.map(p => (
-                  <TouchableOpacity key={p.id} style={styles.resultItem} onPress={() => navigation.navigate('PersonDetails', { personId: p.id })}>
+                  <TouchableOpacity
+                    key={p.id}
+                    style={styles.resultItem}
+                    onPress={() =>
+                      navigation.navigate('PersonDetails', { personId: p.id })
+                    }
+                  >
                     <Icon name="user" size={16} color={Theme.colors.primary} />
                     <View style={styles.resultTextContainer}>
                       <Text style={styles.resultTitle}>{p.fullName}</Text>
-                      <Text style={styles.resultSubtitle}>CCCD: {p.nationalId || 'Chưa cập nhật'}</Text>
+                      <Text style={styles.resultSubtitle}>
+                        CCCD: {p.nationalId || 'Chưa cập nhật'}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -97,9 +140,15 @@ export function DashboardScreen() {
 
             {searchResults.properties.length > 0 && (
               <View style={styles.resultGroup}>
-                <Text style={styles.resultGroupTitle}>Nhà / Phòng ({searchResults.properties.length})</Text>
+                <Text style={styles.resultGroupTitle}>
+                  Nhà / Phòng ({searchResults.properties.length})
+                </Text>
                 {searchResults.properties.map(p => (
-                  <TouchableOpacity key={p.id} style={styles.resultItem} onPress={() => navigation.navigate('PropertiesTab')}>
+                  <TouchableOpacity
+                    key={p.id}
+                    style={styles.resultItem}
+                    onPress={() => navigation.navigate('PropertiesTab')}
+                  >
                     <Icon name="home" size={16} color={Theme.colors.success} />
                     <View style={styles.resultTextContainer}>
                       <Text style={styles.resultTitle}>{p.title}</Text>
@@ -112,52 +161,80 @@ export function DashboardScreen() {
 
             {searchResults.contracts.length > 0 && (
               <View style={styles.resultGroup}>
-                <Text style={styles.resultGroupTitle}>Hợp đồng ({searchResults.contracts.length})</Text>
+                <Text style={styles.resultGroupTitle}>
+                  Hợp đồng ({searchResults.contracts.length})
+                </Text>
                 {searchResults.contracts.map(c => (
-                  <TouchableOpacity key={c.id} style={styles.resultItem} onPress={() => navigation.navigate('ContractDetails', { contractId: c.id })}>
-                    <Icon name="file-text" size={16} color={Theme.colors.text} />
+                  <TouchableOpacity
+                    key={c.id}
+                    style={styles.resultItem}
+                    onPress={() =>
+                      navigation.navigate('ContractDetails', {
+                        contractId: c.id,
+                      })
+                    }
+                  >
+                    <Icon
+                      name="file-text"
+                      size={16}
+                      color={Theme.colors.text}
+                    />
                     <View style={styles.resultTextContainer}>
                       <Text style={styles.resultTitle}>Hợp đồng {c.type}</Text>
-                      <Text style={styles.resultSubtitle}>Mã cổng: {c.govContractId || 'Chưa ĐK'}</Text>
+                      <Text style={styles.resultSubtitle}>
+                        Mã cổng: {c.govContractId || 'Chưa ĐK'}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
 
-            {searchResults.people.length === 0 && searchResults.properties.length === 0 && searchResults.contracts.length === 0 && (
-              <Text style={{ textAlign: 'center', color: Theme.colors.textSecondary, marginTop: 20 }}>Không tìm thấy kết quả nào.</Text>
-            )}
+            {searchResults.people.length === 0 &&
+              searchResults.properties.length === 0 &&
+              searchResults.contracts.length === 0 && (
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    color: Theme.colors.textSecondary,
+                    marginTop: 20,
+                  }}
+                >
+                  Không tìm thấy kết quả nào.
+                </Text>
+              )}
           </View>
         ) : (
           <>
             <View style={styles.statsRow}>
-              <StatCard 
-                title="Khách thuê" 
-                value={people.length} 
-                icon="user" 
-                color={Theme.colors.primary} 
-                bgColor={Theme.colors.primaryLight} 
+              <StatCard
+                title="Khách thuê"
+                value={people.length}
+                icon="user"
+                color={Theme.colors.primary}
+                bgColor={Theme.colors.primaryLight}
               />
               <View style={{ width: Theme.spacing.md }} />
-              <StatCard 
-                title="Phòng trống" 
-                value={properties.length} 
-                icon="home" 
-                color={Theme.colors.success} 
-                bgColor={Theme.colors.successLight} 
+              <StatCard
+                title="Phòng trống"
+                value={properties.length}
+                icon="home"
+                color={Theme.colors.success}
+                bgColor={Theme.colors.successLight}
               />
             </View>
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Chức năng chính</Text>
-              <ActionCard 
+              <ActionCard
                 title="Thêm hồ sơ thuê nhà"
                 subtitle="Đăng ký khách, ghép phòng, lập HĐ"
                 icon="plus"
-                onPress={() => navigation.navigate('AddRentalRecord', { mode: 'Lập hộ mới' })}
+                onPress={() =>
+                  navigation.navigate('AddRentalRecord', { mode: 'Lập hộ mới' })
+                }
               />
-              <ActionCard 
+              <ActionCard
                 title="Tra cứu thông tin"
                 subtitle="Tìm khách thuê, hợp đồng, phòng"
                 icon="search"
@@ -169,18 +246,37 @@ export function DashboardScreen() {
       </ScrollView>
 
       {/* Notifications Modal */}
-      <Modal visible={showNotifications} transparent={true} animationType="slide">
+      <Modal
+        visible={showNotifications}
+        transparent={true}
+        animationType="slide"
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.bottomSheet}>
             <View style={styles.bottomSheetHeader}>
               <Text style={styles.bottomSheetTitle}>Thông báo</Text>
               <TouchableOpacity onPress={() => setShowNotifications(false)}>
-                <Text style={{ color: Theme.colors.textSecondary, fontWeight: 'bold' }}>Đóng</Text>
+                <Text
+                  style={{
+                    color: Theme.colors.textSecondary,
+                    fontWeight: 'bold',
+                  }}
+                >
+                  Đóng
+                </Text>
               </TouchableOpacity>
             </View>
             <ScrollView style={{ maxHeight: 400 }}>
               {notifications.length === 0 ? (
-                <Text style={{ textAlign: 'center', color: Theme.colors.textSecondary, marginTop: 20 }}>Không có thông báo mới.</Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    color: Theme.colors.textSecondary,
+                    marginTop: 20,
+                  }}
+                >
+                  Không có thông báo mới.
+                </Text>
               ) : (
                 notifications.map(n => (
                   <View key={n.id} style={{ marginBottom: 12 }}>
@@ -331,26 +427,26 @@ const styles = StyleSheet.create({
     fontSize: Theme.typography.size.small,
     color: Theme.colors.textSecondary,
   },
-  modalOverlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    justifyContent: 'flex-end' 
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
   },
-  bottomSheet: { 
-    backgroundColor: Theme.colors.surface, 
-    borderTopLeftRadius: 20, 
-    borderTopRightRadius: 20, 
-    padding: Theme.spacing.lg 
+  bottomSheet: {
+    backgroundColor: Theme.colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: Theme.spacing.lg,
   },
-  bottomSheetHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: Theme.spacing.lg 
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.lg,
   },
-  bottomSheetTitle: { 
-    fontSize: Theme.typography.size.subtitle, 
-    fontWeight: 'bold', 
-    color: Theme.colors.text 
+  bottomSheetTitle: {
+    fontSize: Theme.typography.size.subtitle,
+    fontWeight: 'bold',
+    color: Theme.colors.text,
   },
 });

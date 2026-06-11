@@ -23,6 +23,7 @@ export interface Property {
   ward?: string;
   city?: string;
   fullAddress?: string;
+  maxCapacity?: number;
   ownerPersonId?: string;
   note?: string;
   createdAt: number;

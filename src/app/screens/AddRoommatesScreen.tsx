@@ -94,18 +94,20 @@ export const AddRoommatesScreen = observer(() => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.tabContainer}>
-        {drafts.map((_, index) => (
-          <TouchableOpacity 
-            key={index} 
-            style={[styles.tab, activeTab === index && styles.tabActive]}
-            onPress={() => setActiveTab(index)}
-          >
-            <Text style={[styles.tabText, activeTab === index && styles.tabTextActive]}>
-              Người {index + 1}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={{ borderBottomWidth: 1, borderBottomColor: Theme.colors.border }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabContainer}>
+          {drafts.map((_, index) => (
+            <TouchableOpacity 
+              key={index} 
+              style={[styles.tab, activeTab === index && styles.tabActive]}
+              onPress={() => setActiveTab(index)}
+            >
+              <Text style={[styles.tabText, activeTab === index && styles.tabTextActive]}>
+                Người {index + 1}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -192,8 +194,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Theme.spacing.md, paddingVertical: Theme.spacing.md, backgroundColor: Theme.colors.surface, borderBottomWidth: 1, borderBottomColor: Theme.colors.border },
   backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: Theme.typography.size.body, fontWeight: 'bold', color: Theme.colors.text },
-  tabContainer: { flexDirection: 'row', backgroundColor: Theme.colors.surface, borderBottomWidth: 1, borderBottomColor: Theme.colors.border },
-  tab: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabContainer: { flexDirection: 'row', backgroundColor: Theme.colors.surface, minWidth: '100%' },
+  tab: { flex: 1, minWidth: 100, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: Theme.colors.primary },
   tabText: { fontSize: Theme.typography.size.small, color: Theme.colors.textSecondary, fontWeight: '500' },
   tabTextActive: { color: Theme.colors.primary, fontWeight: 'bold' },

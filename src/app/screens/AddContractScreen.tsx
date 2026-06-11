@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Theme } from '../../constants/theme';
@@ -9,47 +9,68 @@ import { useContracts } from '../../hooks/useContracts';
 import { usePeople } from '../../hooks/usePeople';
 import { useProperties } from '../../hooks/useProperties';
 import { generateId } from '../../utils/uuid';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
 
 export function AddContractScreen() {
   const navigation = useNavigation();
-  const { saveContract } = useContracts();
+  const { contracts, saveContract } = useContracts();
   const { people } = usePeople();
   const { properties } = useProperties();
 
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
-  const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
-  const [startDate, setStartDate] = useState(moment().format('DD/MM/YYYY'));
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(''); // Will store the ID of the existing contract/group
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showGroupModal, setShowGroupModal] = useState(false);
 
-  const toggleTenant = (id: string) => {
-    if (selectedTenantIds.includes(id)) {
-      setSelectedTenantIds(prev => prev.filter(t => t !== id));
-    } else {
-      if (selectedTenantIds.length >= 5) {
-        Alert.alert('Lỗi', 'Chỉ được chọn tối đa 5 người thuê cho một phòng.');
-        return;
-      }
-      setSelectedTenantIds(prev => [...prev, id]);
-    }
-  };
+  const [contractType, setContractType] = useState<'Rental' | 'Borrow' | 'Stay'>('Rental');
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+
+  const [startDate, setStartDate] = useState(moment().format('DD/MM/YYYY'));
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Group existing contracts to represent "Householder + Room"
+  const rentalGroups = useMemo(() => {
+    // To avoid duplicates, we might just take unique tenant groups. 
+    // But taking all active contracts is the easiest way.
+    return contracts.map(c => {
+      const property = properties.find(p => p.id === c.propertyId);
+      const primaryTenant = people.find(p => p.id === c.tenantPersonIds[0]);
+      const roommates = people.filter(p => c.tenantPersonIds.slice(1).includes(p.id));
+      
+      const searchString = `${property?.title || ''} ${primaryTenant?.fullName || ''} ${primaryTenant?.nationalId || ''} ${roommates.map(r => (r.fullName || '') + ' ' + (r.nationalId || '')).join(' ')}`.toLowerCase();
+
+      return {
+        id: c.id,
+        sourceContract: c,
+        property,
+        primaryTenant,
+        roommates,
+        searchString
+      };
+    }).filter(g => g.primaryTenant && g.property); // Only valid ones
+  }, [contracts, properties, people]);
+
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery) return rentalGroups;
+    const lowerQ = searchQuery.toLowerCase();
+    return rentalGroups.filter(g => g.searchString.includes(lowerQ));
+  }, [rentalGroups, searchQuery]);
+
+  const selectedGroup = rentalGroups.find(g => g.id === selectedGroupId);
 
   const handleSave = () => {
-    if (!selectedPropertyId) {
-      Alert.alert('Lỗi', 'Vui lòng chọn nhà/phòng.');
-      return;
-    }
-    if (selectedTenantIds.length === 0) {
-      Alert.alert('Lỗi', 'Phải có ít nhất 1 người thuê.');
+    if (!selectedGroup) {
+      Alert.alert('Lỗi', 'Vui lòng chọn Hồ sơ thuê (Chủ hộ & Phòng).');
       return;
     }
 
     const now = Date.now();
     const newContract: Contract = {
       id: generateId(),
-      propertyId: selectedPropertyId,
+      propertyId: selectedGroup.property!.id,
       landlordPersonId: 'owner', // Defaulting to owner for MVP
-      tenantPersonIds: selectedTenantIds,
-      type: 'Rental',
+      tenantPersonIds: selectedGroup.sourceContract.tenantPersonIds,
+      type: contractType,
       startDate,
       contractStatus: 'Active',
       createdAt: now,
@@ -57,7 +78,19 @@ export function AddContractScreen() {
     };
 
     saveContract(newContract);
-    navigation.goBack();
+    
+    Alert.alert('Thành công', 'Đã tạo hợp đồng mới!', [
+      { text: 'OK', onPress: () => navigation.goBack() }
+    ]);
+  };
+
+  const getContractTypeName = (type: 'Rental' | 'Borrow' | 'Stay') => {
+    switch (type) {
+      case 'Rental': return 'Thuê';
+      case 'Borrow': return 'Cho mượn';
+      case 'Stay': return 'Ở nhờ';
+      default: return 'Khác';
+    }
   };
 
   return (
@@ -70,69 +103,161 @@ export function AddContractScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        
-        {/* Chọn nhà */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>1. Chọn Nhà/Phòng</Text>
-          {properties.length === 0 ? (
-            <Text style={styles.warningText}>Bạn chưa thêm Nhà/Phòng nào. Hãy thêm nhà trước khi tạo hợp đồng.</Text>
-          ) : (
-            properties.map(p => (
-              <TouchableOpacity 
-                key={p.id} 
-                style={[styles.selectionItem, selectedPropertyId === p.id && styles.selectionItemActive]}
-                onPress={() => setSelectedPropertyId(p.id)}
-              >
-                <Icon name="home" size={20} color={selectedPropertyId === p.id ? Theme.colors.primary : Theme.colors.textSecondary} />
-                <Text style={[styles.selectionText, selectedPropertyId === p.id && styles.selectionTextActive]}>{p.title}</Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          
+          {/* Section 1: Chọn Khách Thuê & Phòng */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>1. Chọn Hồ sơ (Chủ hộ & Phòng)</Text>
+            
+            {!selectedGroup ? (
+              <TouchableOpacity style={styles.textButton} onPress={() => setShowGroupModal(true)}>
+                <Icon name="search" size={20} color={Theme.colors.primary} />
+                <Text style={styles.textButtonLabel}>Tìm & Chọn hồ sơ thuê</Text>
               </TouchableOpacity>
-            ))
-          )}
-        </View>
-
-        {/* Chọn Khách thuê */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>2. Chọn Khách Thuê ({selectedTenantIds.length}/5)</Text>
-          {people.length === 0 ? (
-            <Text style={styles.warningText}>Bạn chưa thêm Khách thuê nào. Hãy thêm khách trước.</Text>
-          ) : (
-            people.map(p => (
-              <TouchableOpacity 
-                key={p.id} 
-                style={[styles.selectionItem, selectedTenantIds.includes(p.id) && styles.selectionItemActive]}
-                onPress={() => toggleTenant(p.id)}
-              >
-                <View style={[styles.checkbox, selectedTenantIds.includes(p.id) && styles.checkboxActive]}>
-                  {selectedTenantIds.includes(p.id) && <Icon name="plus" size={14} color={Theme.colors.surface} />}
+            ) : (
+              <View style={styles.selectedPropertyContainer}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <Icon name="home" size={16} color={Theme.colors.primary} />
+                    <Text style={styles.selectedPropertyText}> {selectedGroup.property?.title}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Icon name="user" size={16} color={Theme.colors.textSecondary} />
+                    <Text style={[styles.selectedPropertyText, { color: Theme.colors.text, fontWeight: 'normal' }]}> {selectedGroup.primaryTenant?.fullName}</Text>
+                  </View>
+                  {selectedGroup.roommates.length > 0 && (
+                    <Text style={{ fontSize: 12, color: Theme.colors.textSecondary, marginLeft: 20, marginTop: 2 }}>
+                      + {selectedGroup.roommates.length} người ở ghép
+                    </Text>
+                  )}
                 </View>
-                <Text style={[styles.selectionText, selectedTenantIds.includes(p.id) && styles.selectionTextActive]}>{p.fullName} - {p.phone}</Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-
-        {/* Thông tin khác */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>3. Thông tin Hợp đồng</Text>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Ngày bắt đầu (DD/MM/YYYY)</Text>
-            <TextInput 
-              style={styles.input}
-              value={startDate}
-              onChangeText={setStartDate}
-              placeholder="VD: 01/06/2026"
-            />
+                <TouchableOpacity onPress={() => setShowGroupModal(true)}>
+                  <Text style={styles.addText}>Thay đổi</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        </View>
 
-      </ScrollView>
+          {/* Section 2: Thông tin Hợp đồng */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>2. Thông tin Hợp đồng</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Loại hợp đồng</Text>
+              <TouchableOpacity style={styles.dropdownButton} onPress={() => setShowTypeDropdown(!showTypeDropdown)}>
+                <Text style={styles.dropdownText}>{getContractTypeName(contractType)}</Text>
+                <Text style={{ color: Theme.colors.textSecondary, fontSize: 12 }}>{showTypeDropdown ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
+              
+              {showTypeDropdown && (
+                <View style={styles.dropdownList}>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Rental'); setShowTypeDropdown(false); }}>
+                    <Text style={[styles.dropdownItemText, contractType === 'Rental' && styles.dropdownItemTextActive]}>Thuê</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Borrow'); setShowTypeDropdown(false); }}>
+                    <Text style={[styles.dropdownItemText, contractType === 'Borrow' && styles.dropdownItemTextActive]}>Cho mượn</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.dropdownItem, { borderBottomWidth: 0 }]} onPress={() => { setContractType('Stay'); setShowTypeDropdown(false); }}>
+                    <Text style={[styles.dropdownItemText, contractType === 'Stay' && styles.dropdownItemTextActive]}>Ở nhờ</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Ngày bắt đầu</Text>
+              <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+                <Text style={{ color: startDate ? Theme.colors.text : Theme.colors.textSecondary }}>
+                  {startDate || 'Chọn ngày'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            {showDatePicker && (
+              <DateTimePicker
+                value={startDate ? moment(startDate, 'DD/MM/YYYY').toDate() : new Date()}
+                mode="date"
+                display="default"
+                positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
+                negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) setStartDate(moment(selectedDate).format('DD/MM/YYYY'));
+                }}
+              />
+            )}
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.submitButton} onPress={handleSave}>
           <Text style={styles.submitButtonText}>Tạo hợp đồng</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Group Selection Modal */}
+      <Modal visible={showGroupModal} transparent={true} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.bottomSheet, { height: '80%' }]}>
+            <View style={styles.bottomSheetHeader}>
+              <Text style={styles.bottomSheetTitle}>Chọn Hồ sơ (Chủ hộ & Phòng)</Text>
+              <TouchableOpacity onPress={() => setShowGroupModal(false)}>
+                <Text style={{ color: Theme.colors.textSecondary, fontWeight: 'bold' }}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.searchContainer}>
+              <Icon name="search" size={20} color={Theme.colors.textSecondary} />
+              <TextInput 
+                style={styles.searchInput}
+                placeholder="Tìm tên, CCCD, số phòng..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Text style={{ color: Theme.colors.textSecondary, fontWeight: 'bold' }}>Xóa</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <ScrollView style={{ flex: 1 }}>
+              {filteredGroups.length === 0 ? (
+                <Text style={styles.warningText}>Không tìm thấy hồ sơ nào.</Text>
+              ) : (
+                filteredGroups.map(g => (
+                  <TouchableOpacity 
+                    key={g.id} 
+                    style={[styles.selectionItem, selectedGroupId === g.id && styles.selectionItemActive]}
+                    onPress={() => {
+                      setSelectedGroupId(g.id);
+                      setShowGroupModal(false);
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.selectionText, selectedGroupId === g.id && styles.selectionTextActive]}>
+                        Phòng: {g.property?.title}
+                      </Text>
+                      <Text style={{ marginLeft: 12, fontSize: 14, color: Theme.colors.textSecondary, marginTop: 4 }}>
+                        Chủ hộ: {g.primaryTenant?.fullName} {g.primaryTenant?.nationalId ? `(${g.primaryTenant.nationalId})` : ''}
+                      </Text>
+                      {g.roommates.length > 0 && (
+                        <Text style={{ marginLeft: 12, fontSize: 12, color: Theme.colors.textSecondary }}>
+                          + {g.roommates.length} người ở ghép
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -145,17 +270,36 @@ const styles = StyleSheet.create({
   scrollContent: { padding: Theme.spacing.lg },
   section: { backgroundColor: Theme.colors.surface, padding: Theme.spacing.lg, borderRadius: Theme.borderRadius.md, marginBottom: Theme.spacing.xl, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   sectionTitle: { fontSize: Theme.typography.size.body, fontWeight: 'bold', color: Theme.colors.text, marginBottom: Theme.spacing.lg },
-  warningText: { color: Theme.colors.danger, fontSize: Theme.typography.size.small, fontStyle: 'italic' },
+  warningText: { color: Theme.colors.danger, fontSize: Theme.typography.size.small, fontStyle: 'italic', marginTop: Theme.spacing.md, textAlign: 'center' },
   selectionItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: Theme.spacing.md, borderWidth: 1, borderColor: Theme.colors.border, borderRadius: Theme.borderRadius.md, marginBottom: 8 },
   selectionItemActive: { borderColor: Theme.colors.primary, backgroundColor: Theme.colors.primaryLight },
-  selectionText: { marginLeft: 12, fontSize: Theme.typography.size.body, color: Theme.colors.text },
+  selectionText: { marginLeft: 12, fontSize: Theme.typography.size.body, color: Theme.colors.text, fontWeight: '500' },
   selectionTextActive: { color: Theme.colors.primaryDark, fontWeight: 'bold' },
-  checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 1, borderColor: Theme.colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: Theme.colors.background },
-  checkboxActive: { backgroundColor: Theme.colors.primary, borderColor: Theme.colors.primary },
   inputGroup: { marginBottom: Theme.spacing.md },
   label: { fontSize: Theme.typography.size.small, color: Theme.colors.textSecondary, marginBottom: 6, fontWeight: '500' },
-  input: { borderWidth: 1, borderColor: Theme.colors.border, borderRadius: Theme.borderRadius.md, paddingHorizontal: Theme.spacing.md, paddingVertical: 12, fontSize: Theme.typography.size.small, color: Theme.colors.text, backgroundColor: Theme.colors.background },
+  input: { borderWidth: 1, borderColor: Theme.colors.border, borderRadius: Theme.borderRadius.md, paddingHorizontal: Theme.spacing.md, paddingVertical: 12, height: 48, justifyContent: 'center', fontSize: Theme.typography.size.small, color: Theme.colors.text, backgroundColor: Theme.colors.background },
   footer: { padding: Theme.spacing.lg, backgroundColor: Theme.colors.surface, borderTopWidth: 1, borderTopColor: Theme.colors.border },
   submitButton: { backgroundColor: Theme.colors.primary, borderRadius: Theme.borderRadius.md, paddingVertical: 16, alignItems: 'center' },
   submitButtonText: { color: Theme.colors.surface, fontSize: Theme.typography.size.body, fontWeight: 'bold' },
+  
+  textButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  textButtonLabel: { marginLeft: 8, fontSize: Theme.typography.size.body, color: Theme.colors.primary, fontWeight: '500' },
+  selectedPropertyContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Theme.spacing.md, backgroundColor: Theme.colors.primaryLight, borderRadius: Theme.borderRadius.md, borderWidth: 1, borderColor: Theme.colors.primary },
+  selectedPropertyText: { marginLeft: 8, fontSize: Theme.typography.size.body, color: Theme.colors.primaryDark, fontWeight: 'bold' },
+  addText: { color: Theme.colors.primary, fontWeight: 'bold' },
+  
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  bottomSheet: { backgroundColor: Theme.colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Theme.spacing.lg },
+  bottomSheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Theme.spacing.lg },
+  bottomSheetTitle: { fontSize: Theme.typography.size.subtitle, fontWeight: 'bold', color: Theme.colors.text },
+  
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: Theme.colors.background, borderRadius: Theme.borderRadius.md, paddingHorizontal: Theme.spacing.md, height: 44, marginBottom: Theme.spacing.lg },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: Theme.typography.size.small, color: Theme.colors.text },
+
+  dropdownButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: Theme.colors.border, borderRadius: Theme.borderRadius.md, paddingHorizontal: Theme.spacing.md, paddingVertical: 12, height: 48, backgroundColor: Theme.colors.background },
+  dropdownText: { fontSize: Theme.typography.size.small, color: Theme.colors.text },
+  dropdownList: { marginTop: 4, borderWidth: 1, borderColor: Theme.colors.border, borderRadius: Theme.borderRadius.md, backgroundColor: Theme.colors.surface, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  dropdownItem: { paddingVertical: 12, paddingHorizontal: Theme.spacing.md, borderBottomWidth: 1, borderBottomColor: Theme.colors.border },
+  dropdownItemText: { fontSize: Theme.typography.size.small, color: Theme.colors.text },
+  dropdownItemTextActive: { color: Theme.colors.primary, fontWeight: 'bold' },
 });

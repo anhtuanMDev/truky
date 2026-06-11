@@ -37,9 +37,10 @@ export function PropertyDetailsScreen() {
   const isOccupied = activeContracts.length > 0;
   
   let currentTenants: any[] = [];
+  let activeContract: any = null;
   if (isOccupied) {
-    const activeContract = activeContracts[0];
-    currentTenants = activeContract.tenantPersonIds.map(id => people.find(p => p.id === id)).filter(p => !!p);
+    activeContract = activeContracts[0];
+    currentTenants = activeContract.tenantPersonIds.map((id: string) => people.find(p => p.id === id)).filter((p: any) => !!p);
   }
 
   return (
@@ -102,6 +103,14 @@ export function PropertyDetailsScreen() {
                 <View style={styles.tenantInfoContainer}>
                   <Text style={styles.tenantName}>{t?.fullName} {idx === 0 ? '(Chủ hộ)' : ''}</Text>
                   <Text style={styles.tenantCCCD}>CCCD: {t?.nationalId || 'Chưa cập nhật'}</Text>
+                  {activeContract && (
+                    <View style={{ marginTop: 4, flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: activeContract.type === 'Rental' ? Theme.colors.success : Theme.colors.warning, marginRight: 6 }} />
+                      <Text style={{ fontSize: 12, color: Theme.colors.textSecondary }}>
+                        {activeContract.type === 'Rental' ? 'Hợp đồng chính thức' : 'Đăng ký tạm trú'}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <Icon name="chevron-left" size={16} color={Theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
               </TouchableOpacity>
@@ -110,6 +119,51 @@ export function PropertyDetailsScreen() {
             <Text style={styles.emptyText}>Chưa có người thuê.</Text>
           )}
         </View>
+
+        {activeContract && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Thông tin hợp đồng hiện tại</Text>
+            
+            <View style={{ marginTop: 12 }}>
+              <View style={styles.grid}>
+                <View style={styles.gridItem}>
+                  <Text style={styles.gridLabel}>Loại hợp đồng</Text>
+                  <Text style={styles.gridValue}>{activeContract.type === 'Rental' ? 'Thuê nhà' : activeContract.type}</Text>
+                </View>
+                <View style={styles.gridItem}>
+                  <Text style={styles.gridLabel}>Ngày bắt đầu</Text>
+                  <Text style={styles.gridValue}>{activeContract.startDate || 'Chưa cập nhật'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.grid}>
+                <View style={styles.gridItem}>
+                  <Text style={styles.gridLabel}>Ngày kết thúc</Text>
+                  <Text style={styles.gridValue}>{activeContract.endDate || 'Chưa xác định'}</Text>
+                </View>
+                {activeContract.type === 'Rental' && (
+                  <View style={styles.gridItem}>
+                    <Text style={styles.gridLabel}>Giá thuê</Text>
+                    <Text style={[styles.gridValue, { color: Theme.colors.primary }]}>
+                      {activeContract.rentPrice ? `${activeContract.rentPrice.toLocaleString()} đ` : 'Chưa cập nhật'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {activeContract.type === 'Rental' && (
+                <View style={styles.grid}>
+                  <View style={styles.gridItem}>
+                    <Text style={styles.gridLabel}>Tiền cọc</Text>
+                    <Text style={styles.gridValue}>
+                      {activeContract.deposit ? `${activeContract.deposit.toLocaleString()} đ` : 'Không có'}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
       </ScrollView>
     </SafeAreaView>

@@ -124,10 +124,7 @@ export const AddRentalRecordScreen = observer(() => {
 
   const [showGuardianDOBPicker, setShowGuardianDOBPicker] = useState(false);
 
-  const [showLeaseModal, setShowLeaseModal] = useState(false);
-  const [contractIdForLease, setContractIdForLease] = useState('');
-  const [leaseEndDate, setLeaseEndDate] = useState<string>('');
-  const [showLeaseDatePicker, setShowLeaseDatePicker] = useState(false);
+
 
   const {
     control,
@@ -352,8 +349,8 @@ export const AddRentalRecordScreen = observer(() => {
           {
             text: 'Có tạo HĐ',
             onPress: () => {
-              setContractIdForLease(newContract.id);
-              setShowLeaseModal(true);
+              isSubmittedRef.current = true;
+              navigation.replace('AddContract', { initialGroupId: newContract.id, initialContractType: 'Rental' });
             },
           },
         ],
@@ -421,8 +418,8 @@ export const AddRentalRecordScreen = observer(() => {
           {
             text: 'Có',
             onPress: () => {
-              setContractIdForLease(updatedContract.id);
-              setShowLeaseModal(true);
+              isSubmittedRef.current = true;
+              navigation.replace('AddContract', { initialGroupId: updatedContract.id, initialContractType: 'Rental' });
             },
           },
         ],
@@ -1364,136 +1361,7 @@ export const AddRentalRecordScreen = observer(() => {
       </Modal>
 
       {/* Lease Modal */}
-      <Modal visible={showLeaseModal} transparent={true} animationType="fade">
-        <View
-          style={[
-            styles.modalOverlay,
-            { justifyContent: 'center', padding: 16 },
-          ]}
-        >
-          <View style={[styles.bottomSheet, { borderRadius: 20 }]}>
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: 'bold',
-                marginBottom: 8,
-                color: Theme.colors.text,
-              }}
-            >
-              Tạo Hợp đồng thuê nhà
-            </Text>
-            <Text
-              style={{
-                fontSize: 14,
-                color: Theme.colors.textSecondary,
-                marginBottom: 20,
-              }}
-            >
-              Vui lòng chọn ngày kết thúc để nâng cấp hồ sơ tạm trú thành Hợp
-              đồng thuê nhà chính thức.
-            </Text>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Ngày kết thúc (Hạn hợp đồng) *</Text>
-              <TouchableOpacity
-                style={styles.input}
-                onPress={() => setShowLeaseDatePicker(true)}
-              >
-                <Text
-                  style={{
-                    color: leaseEndDate
-                      ? Theme.colors.text
-                      : Theme.colors.textSecondary,
-                  }}
-                >
-                  {leaseEndDate || 'Chọn ngày'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'flex-end',
-                marginTop: 16,
-              }}
-            >
-              <TouchableOpacity
-                onPress={() => {
-                  setShowLeaseModal(false);
-                  isSubmittedRef.current = true;
-                  navigation.goBack();
-                }}
-                style={{ paddingVertical: 12, paddingHorizontal: 20 }}
-              >
-                <Text
-                  style={{
-                    color: Theme.colors.textSecondary,
-                    fontWeight: 'bold',
-                  }}
-                >
-                  Bỏ qua
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  if (!leaseEndDate) {
-                    Alert.alert('Lỗi', 'Vui lòng chọn ngày kết thúc.');
-                    return;
-                  }
-                  const c = contracts.find(x => x.id === contractIdForLease);
-                  if (c) {
-                    saveContract({
-                      ...c,
-                      type: 'Rental',
-                      endDate: leaseEndDate,
-                      updatedAt: Date.now(),
-                    });
-                  }
-                  setShowLeaseModal(false);
-                  isSubmittedRef.current = true;
-                  navigation.goBack();
-                }}
-                style={{
-                  paddingVertical: 12,
-                  paddingHorizontal: 20,
-                  backgroundColor: Theme.colors.primary,
-                  borderRadius: 8,
-                  marginLeft: 8,
-                }}
-              >
-                <Text style={{ color: 'white', fontWeight: 'bold' }}>
-                  Xác nhận
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {showLeaseDatePicker && (
-          <DateTimePicker
-            value={
-              leaseEndDate
-                ? moment(leaseEndDate, 'DD/MM/YYYY').toDate()
-                : new Date()
-            }
-            mode="date"
-            display="default"
-            minimumDate={new Date()}
-            positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
-            negativeButton={{
-              label: 'Hủy',
-              textColor: Theme.colors.textSecondary,
-            }}
-            onChange={(event, selectedDate) => {
-              setShowLeaseDatePicker(false);
-              if (event.type === 'set' && selectedDate) {
-                setLeaseEndDate(moment(selectedDate).format('DD/MM/YYYY'));
-              }
-            }}
-          />
-        )}
-      </Modal>
     </SafeAreaView>
   );
 });

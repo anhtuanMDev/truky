@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
 import { Contract } from '../../domain/models/types';
@@ -13,21 +13,29 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
 
 export function AddContractScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const initialGroupId = route.params?.initialGroupId;
+  const initialContractType = route.params?.initialContractType || 'Đăng ký tạm trú';
+  
   const { contracts, saveContract } = useContracts();
   const { people } = usePeople();
   const { properties } = useProperties();
 
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(''); // Will store the ID of the existing contract/group
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(initialGroupId || ''); 
   const [searchQuery, setSearchQuery] = useState('');
   const [showGroupModal, setShowGroupModal] = useState(false);
 
-  const [contractType, setContractType] = useState<Contract['type']>('Đăng ký tạm trú');
+  const [contractType, setContractType] = useState<Contract['type']>(initialContractType);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
   const [startDate, setStartDate] = useState(moment().format('DD/MM/YYYY'));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [durationYears, setDurationYears] = useState('1');
+  const [durationMonths, setDurationMonths] = useState('0');
+  
+  const [rentPrice, setRentPrice] = useState('');
+  const [deposit, setDeposit] = useState('');
 
   // Group existing contracts to represent "Householder + Room"
   const rentalGroups = useMemo(() => {
@@ -65,14 +73,16 @@ export function AddContractScreen() {
       return;
     }
 
-    const duration = parseInt(durationYears, 10);
-    if (isNaN(duration) || duration <= 0 || duration > 2) {
-      Alert.alert('Lỗi', 'Thời gian đăng ký tối đa là 2 năm và phải lớn hơn 0.');
+    const durationY = parseInt(durationYears, 10) || 0;
+    const durationM = parseInt(durationMonths, 10) || 0;
+    
+    if (durationY === 0 && durationM === 0) {
+      Alert.alert('Lỗi', 'Thời gian hợp đồng phải lớn hơn 0.');
       return;
     }
 
     const startMoment = moment(startDate, 'DD/MM/YYYY');
-    const endDate = startMoment.add(duration, 'years').format('DD/MM/YYYY');
+    const endDate = startMoment.add(durationY, 'years').add(durationM, 'months').format('DD/MM/YYYY');
 
     const now = Date.now();
     const newContract: Contract = {
@@ -87,6 +97,13 @@ export function AddContractScreen() {
       createdAt: now,
       updatedAt: now,
     };
+
+    if (contractType === 'Rental') {
+      const parsedRent = parseInt(rentPrice.replace(/[^0-9]/g, ''), 10);
+      const parsedDeposit = parseInt(deposit.replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(parsedRent)) newContract.rentPrice = parsedRent;
+      if (!isNaN(parsedDeposit)) newContract.deposit = parsedDeposit;
+    }
 
     saveContract(newContract);
     
@@ -158,6 +175,9 @@ export function AddContractScreen() {
               
               {showTypeDropdown && (
                 <View style={styles.dropdownList}>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Rental'); setShowTypeDropdown(false); }}>
+                    <Text style={[styles.dropdownItemText, contractType === 'Rental' && styles.dropdownItemTextActive]}>Hợp đồng thuê nhà</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Đăng ký tạm trú'); setShowTypeDropdown(false); }}>
                     <Text style={[styles.dropdownItemText, contractType === 'Đăng ký tạm trú' && styles.dropdownItemTextActive]}>Đăng ký tạm trú</Text>
                   </TouchableOpacity>
@@ -180,17 +200,52 @@ export function AddContractScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Thời gian (năm)</Text>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.label}>Số năm</Text>
                 <TextInput 
                   style={styles.input} 
                   value={durationYears} 
                   onChangeText={setDurationYears} 
                   keyboardType="numeric"
-                  maxLength={1}
+                  maxLength={2}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Số tháng</Text>
+                <TextInput 
+                  style={styles.input} 
+                  value={durationMonths} 
+                  onChangeText={setDurationMonths} 
+                  keyboardType="numeric"
+                  maxLength={2}
                 />
               </View>
             </View>
+
+            {contractType === 'Rental' && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md }}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={styles.label}>Giá thuê (VNĐ)</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    value={rentPrice} 
+                    onChangeText={setRentPrice} 
+                    keyboardType="numeric"
+                    placeholder="VD: 3000000"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Tiền cọc (VNĐ)</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    value={deposit} 
+                    onChangeText={setDeposit} 
+                    keyboardType="numeric"
+                    placeholder="VD: 3000000"
+                  />
+                </View>
+              </View>
+            )}
             
             {showDatePicker && (
               <DateTimePicker

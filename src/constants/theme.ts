@@ -17,11 +17,11 @@ export const Theme = {
   },
   typography: {
     size: {
-      small: 16,
-      body: 18,
-      subtitle: 22,
-      title: 28,
-      heading: 36,
+      small: 12,
+      body: 14,
+      subtitle: 16,
+      title: 20,
+      heading: 24,
     },
     weight: {
       regular: '400',
@@ -30,17 +30,17 @@ export const Theme = {
     },
   },
   spacing: {
-    xs: 8,
-    sm: 12,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    xxl: 48,
-  },
-  borderRadius: {
+    xs: 4,
     sm: 8,
     md: 12,
     lg: 16,
+    xl: 24,
+    xxl: 32,
+  },
+  borderRadius: {
+    sm: 6,
+    md: 10,
+    lg: 14,
     full: 9999,
   },
   hitSlop: { top: 12, bottom: 12, left: 12, right: 12 }, // Enhances touch area

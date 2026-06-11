@@ -217,7 +217,7 @@ export function DashboardScreen() {
               <View style={{ width: Theme.spacing.md }} />
               <StatCard
                 title="Phòng trống"
-                value={properties.length}
+                value={`${properties.length - new Set(contracts.filter(c => c.contractStatus === 'Active').map(c => c.propertyId)).size}/${properties.length}`}
                 icon="home"
                 color={Theme.colors.success}
                 bgColor={Theme.colors.successLight}

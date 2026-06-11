@@ -188,6 +188,8 @@ export const AddRentalRecordScreen = observer(() => {
               value={primaryDOB ? moment(primaryDOB, 'DD/MM/YYYY').toDate() : new Date(1990, 0, 1)}
               mode="date"
               display="default"
+              positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
+              negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
               onChange={(event, selectedDate) => {
                 setShowDOBPicker(false);
                 if (selectedDate) setPrimaryDOB(moment(selectedDate).format('DD/MM/YYYY'));
@@ -240,6 +242,8 @@ export const AddRentalRecordScreen = observer(() => {
               value={startDate ? moment(startDate, 'DD/MM/YYYY').toDate() : new Date()}
               mode="date"
               display="default"
+              positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
+              negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
               onChange={(event, selectedDate) => {
                 setShowStartDatePicker(false);
                 if (selectedDate) setStartDate(moment(selectedDate).format('DD/MM/YYYY'));

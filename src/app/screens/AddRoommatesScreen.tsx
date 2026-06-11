@@ -127,6 +127,8 @@ export const AddRoommatesScreen = observer(() => {
               value={activeRoommate.dateOfBirth ? moment(activeRoommate.dateOfBirth, 'DD/MM/YYYY').toDate() : new Date(2000, 0, 1)}
               mode="date"
               display="default"
+              positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
+              negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
               onChange={(event, selectedDate) => {
                 setShowDatePicker(false);
                 if (selectedDate) {

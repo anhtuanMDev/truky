@@ -17,6 +17,7 @@ export function AddContractScreen() {
   const route = useRoute<any>();
   const initialGroupId = route.params?.initialGroupId;
   const initialContractType = route.params?.initialContractType || 'Đăng ký tạm trú';
+  const terminateContractId = route.params?.terminateContractId;
   
   const { contracts, saveContract } = useContracts();
   const { people } = usePeople();
@@ -107,9 +108,23 @@ export function AddContractScreen() {
 
     saveContract(newContract);
     
-    Alert.alert('Thành công', 'Đã tạo hợp đồng mới!', [
-      { text: 'OK', onPress: () => navigation.goBack() }
-    ]);
+    if (terminateContractId) {
+      const oldContract = contracts.find(c => c.id === terminateContractId);
+      if (oldContract) {
+        saveContract({
+          ...oldContract,
+          contractStatus: 'Terminated',
+          updatedAt: Date.now()
+        });
+      }
+      Alert.alert('Hoàn tất', 'Đã tạo hợp đồng Xóa tạm trú. Hợp đồng thuê cũ đã chính thức chấm dứt, phòng đã trở về trạng thái trống!', [
+        { text: 'OK', onPress: () => navigation.navigate('DashboardTab') }
+      ]);
+    } else {
+      Alert.alert('Thành công', 'Đã tạo hợp đồng mới!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    }
   };
 
   const getContractTypeName = (type: Contract['type']) => {

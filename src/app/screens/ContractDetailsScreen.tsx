@@ -59,31 +59,18 @@ export function ContractDetailsScreen() {
   const handleTerminate = () => {
     Alert.alert(
       'Xác nhận chấm dứt',
-      'Bạn có chắc muốn chấm dứt hợp đồng này? Trạng thái phòng sẽ lập tức chuyển thành "Trống" và bạn sẽ được tạo mẫu CT01 (Xóa đăng ký).',
+      'Bạn sẽ được chuyển tới màn hình tạo Hợp đồng Xóa tạm trú. Sau khi hoàn tất tạo hợp đồng này, hợp đồng thuê hiện tại sẽ chính thức chấm dứt và phòng sẽ chuyển thành "Trống".',
       [
         { text: 'Hủy', style: 'cancel' },
         {
-          text: 'Chấm dứt',
+          text: 'Tiếp tục',
           style: 'destructive',
           onPress: () => {
-            saveContract({
-              ...contract,
-              contractStatus: 'Terminated',
-              updatedAt: Date.now(),
+            navigation.navigate('AddContract', { 
+              initialGroupId: contract.id, 
+              initialContractType: 'Xóa tạm trú',
+              terminateContractId: contract.id 
             });
-            
-            if (primaryTenant && property) {
-              const formData = CT01Mapper.mapToForm(
-                primaryTenant,
-                property,
-                { reason: 'Xóa đăng ký thường trú/tạm trú', authorityName: '' } as any,
-                coTenants as any,
-                undefined
-              );
-              navigation.replace('CT01Preview', { formData });
-            } else {
-              navigation.goBack();
-            }
           }
         }
       ]

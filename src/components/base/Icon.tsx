@@ -9,8 +9,9 @@ export interface IconProps {
   name: keyof typeof glyphMap.i;
   size?: number;
   color?: string | string[];
+  style?: any;
 }
 
-export function Icon({ name, size = 24, color = Theme.colors.text }: IconProps) {
-  return <NanoIcon name={name as any} size={size} color={color} />;
+export function Icon({ name, size = 24, color = Theme.colors.text, style }: IconProps) {
+  return <NanoIcon name={name as any} size={size} color={color} style={style} />;
 }

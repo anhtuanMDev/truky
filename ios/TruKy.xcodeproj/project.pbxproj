@@ -111,6 +111,7 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
+				463C011213734B488AAB1FA8 /* Copy nanoicons fonts */,
 			);
 			buildRules = (
 			);
@@ -236,6 +237,25 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-TruKy/Pods-TruKy-resources.sh\"\n";
 			showEnvVarsInLog = 0;
+		};
+		463C011213734B488AAB1FA8 /* Copy nanoicons fonts */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Copy nanoicons fonts";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "
+        NANOICONS_DIR=\"\${PROJECT_DIR}/nanoicons-fonts\"
+        if [ -d \"$NANOICONS_DIR\" ]; then
+          cp \"$NANOICONS_DIR\"/*.ttf \"\${BUILT_PRODUCTS_DIR}/\${UNLOCALIZED_RESOURCES_FOLDER_PATH}/\" 2>/dev/null || true
+        fi
+      ";
 		};
 /* End PBXShellScriptBuildPhase section */
 

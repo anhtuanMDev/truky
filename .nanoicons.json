@@ -1,0 +1,8 @@
+{
+  "iconSets": [
+    {
+      "inputDir": "./src/assets/icons/ui",
+      "fontFamily": "ui"
+    }
+  ]
+}

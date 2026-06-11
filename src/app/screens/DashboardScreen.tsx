@@ -141,10 +141,10 @@ export function DashboardScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Chức năng chính</Text>
               <ActionCard 
-                title="Thêm khách thuê mới"
-                subtitle="Đăng ký hồ sơ, tạo hợp đồng"
+                title="Thêm hồ sơ thuê nhà"
+                subtitle="Đăng ký khách, ghép phòng, lập HĐ"
                 icon="plus"
-                onPress={() => navigation.navigate('AddPerson')}
+                onPress={() => navigation.navigate('AddRentalRecord')}
               />
               <ActionCard 
                 title="Tra cứu thông tin"

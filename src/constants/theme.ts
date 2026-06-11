@@ -1,19 +1,19 @@
 export const Theme = {
   colors: {
-    primary: '#0EA5E9', // Trustful sky blue
-    primaryLight: '#E0F2FE',
-    primaryDark: '#0369A1',
-    background: '#F8FAFC', // Clean, bright background
+    primary: '#0055D4',
+    primaryLight: '#E6EFFF',
+    primaryDark: '#003380',
+    background: '#EDF0F5',
     surface: '#FFFFFF',
-    text: '#0F172A', // High contrast text
-    textSecondary: '#64748B', // Soft secondary text
-    border: '#E2E8F0',
-    danger: '#EF4444',
-    dangerLight: '#FEE2E2',
-    success: '#10B981',
-    successLight: '#D1FAE5',
-    warning: '#F59E0B',
-    warningLight: '#FEF3C7',
+    text: '#2D2E33',
+    textSecondary: '#757780',
+    border: '#D6D8E0',
+    danger: '#822800',
+    dangerLight: '#F7E5E0',
+    success: '#008A5D',
+    successLight: '#E0F5EB',
+    warning: '#D46B00',
+    warningLight: '#FCECDA',
   },
   typography: {
     size: {

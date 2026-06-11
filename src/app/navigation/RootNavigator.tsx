@@ -9,6 +9,8 @@ import { AddContractScreen } from '../screens/AddContractScreen';
 import { ContractDetailsScreen } from '../screens/ContractDetailsScreen';
 import { CT01PreviewScreen } from '../screens/CT01PreviewScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { AddRentalRecordScreen } from '../screens/AddRentalRecordScreen';
+import { AddRoommatesScreen } from '../screens/AddRoommatesScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +26,8 @@ export function RootNavigator() {
         <Stack.Screen name="ContractDetails" component={ContractDetailsScreen} />
         <Stack.Screen name="CT01Preview" component={CT01PreviewScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="AddRentalRecord" component={AddRentalRecordScreen} />
+        <Stack.Screen name="AddRoommates" component={AddRoommatesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

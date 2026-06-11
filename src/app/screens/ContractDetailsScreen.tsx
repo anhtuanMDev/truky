@@ -77,7 +77,7 @@ export function ContractDetailsScreen() {
             <View key={t?.id} style={styles.tenantRow}>
               <Icon name="user" size={16} color={idx === 0 ? Theme.colors.primary : Theme.colors.textSecondary} />
               <View style={styles.tenantInfoContainer}>
-                <Text style={styles.tenantName}>{t?.fullName} {idx === 0 ? '(Đại diện)' : ''}</Text>
+                <Text style={styles.tenantName}>{t?.fullName} {idx === 0 ? '(Chủ hộ)' : ''}</Text>
                 <Text style={styles.tenantCCCD}>CCCD: {t?.nationalId || 'Chưa cập nhật'}</Text>
               </View>
             </View>

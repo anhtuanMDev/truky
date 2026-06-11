@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, ScrollView, Text, TouchableOpacity, TextInput, FlatList } from 'react-native';
+import { StyleSheet, View, ScrollView, Text, TouchableOpacity, TextInput, FlatList, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
@@ -14,6 +14,7 @@ import { useProperties } from '../../hooks/useProperties';
 export function DashboardScreen() {
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
   const { people } = usePeople();
   const { contracts } = useContracts();
   const { properties } = useProperties();
@@ -32,6 +33,11 @@ export function DashboardScreen() {
     // Optional: could trigger a full search page
   };
 
+  const notifications = [
+    { id: '1', message: '2 hợp đồng sắp hết hạn', type: 'warning' as const },
+    { id: '2', message: '1 khách thuê chưa khai báo tạm trú', type: 'danger' as const },
+  ];
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -47,17 +53,27 @@ export function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* FR-9.1: Global Text Search Box */}
-        <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color={Theme.colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Tìm tên, CCCD, mã ĐK Tạm trú..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
+        {/* FR-9.1: Global Text Search Box & Notifications */}
+        <View style={styles.topRow}>
+          <View style={[styles.searchContainer, { flex: 1 }]}>
+            <Icon name="search" size={20} color={Theme.colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Tìm tên, CCCD, mã ĐK Tạm trú..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+            />
+          </View>
+          <TouchableOpacity style={styles.bellButton} onPress={() => setShowNotifications(true)}>
+            <Text style={{ fontSize: 20 }}>🔔</Text>
+            {notifications.length > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{notifications.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
         
         {searchQuery.trim().length > 0 ? (
@@ -115,11 +131,6 @@ export function DashboardScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.alertsContainer}>
-              <AlertCard message="2 hợp đồng sắp hết hạn" type="warning" />
-              <AlertCard message="1 khách thuê chưa khai báo tạm trú" type="danger" />
-            </View>
-
             <View style={styles.statsRow}>
               <StatCard 
                 title="Khách thuê" 
@@ -156,6 +167,31 @@ export function DashboardScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Notifications Modal */}
+      <Modal visible={showNotifications} transparent={true} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.bottomSheetHeader}>
+              <Text style={styles.bottomSheetTitle}>Thông báo</Text>
+              <TouchableOpacity onPress={() => setShowNotifications(false)}>
+                <Text style={{ color: Theme.colors.textSecondary, fontWeight: 'bold' }}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {notifications.length === 0 ? (
+                <Text style={{ textAlign: 'center', color: Theme.colors.textSecondary, marginTop: 20 }}>Không có thông báo mới.</Text>
+              ) : (
+                notifications.map(n => (
+                  <View key={n.id} style={{ marginBottom: 12 }}>
+                    <AlertCard message={n.message} type={n.type} />
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -167,10 +203,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: Theme.spacing.xxl,
-  },
-  alertsContainer: {
-    paddingHorizontal: Theme.spacing.lg,
-    marginBottom: Theme.spacing.lg,
   },
   statsRow: {
     flexDirection: 'row',
@@ -213,12 +245,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Theme.spacing.lg,
+    marginBottom: Theme.spacing.xl,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Theme.colors.surface,
-    marginHorizontal: Theme.spacing.lg,
-    marginBottom: Theme.spacing.xl,
     paddingHorizontal: Theme.spacing.md,
     borderRadius: Theme.borderRadius.md,
     height: 48,
@@ -230,6 +266,35 @@ const styles = StyleSheet.create({
     marginLeft: Theme.spacing.sm,
     fontSize: Theme.typography.size.body,
     color: Theme.colors.text,
+  },
+  bellButton: {
+    width: 48,
+    height: 48,
+    marginLeft: Theme.spacing.md,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+  },
+  badge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: Theme.colors.danger,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Theme.colors.surface,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   searchResultsContainer: {
     paddingHorizontal: Theme.spacing.lg,
@@ -265,5 +330,27 @@ const styles = StyleSheet.create({
   resultSubtitle: {
     fontSize: Theme.typography.size.small,
     color: Theme.colors.textSecondary,
+  },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'flex-end' 
+  },
+  bottomSheet: { 
+    backgroundColor: Theme.colors.surface, 
+    borderTopLeftRadius: 20, 
+    borderTopRightRadius: 20, 
+    padding: Theme.spacing.lg 
+  },
+  bottomSheetHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: Theme.spacing.lg 
+  },
+  bottomSheetTitle: { 
+    fontSize: Theme.typography.size.subtitle, 
+    fontWeight: 'bold', 
+    color: Theme.colors.text 
   },
 });

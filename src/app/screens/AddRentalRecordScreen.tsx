@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -26,16 +26,40 @@ const FormSchema = z.object({
   contractId: z.string().optional(),
   primaryName: z.string().min(2, 'Vui lòng nhập họ tên'),
   primaryPhone: z.string().optional(),
-  primaryCCCD: CCCDSchema.optional().or(z.literal('')),
-  primaryDOB: z.string().optional(),
+  primaryCCCD: CCCDSchema,
+  primaryDOB: z.string().min(1, 'Vui lòng chọn ngày sinh'),
   primaryGender: z.enum(['Male', 'Female', 'Other']).optional(),
   startDate: z.string().min(1, 'Vui lòng chọn ngày'),
+  guardianName: z.string().optional(),
+  guardianCCCD: z.string().optional(),
+  guardianDOB: z.string().optional(),
+  guardianGender: z.enum(['Male', 'Female', 'Other']).optional(),
+  guardianPhone: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.mode === 'Lập hộ mới' && !data.propertyId) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Vui lòng chọn nhà/phòng', path: ['propertyId'] });
   }
   if (data.mode === 'Vào hộ đã có' && !data.contractId) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Vui lòng chọn hộ gia đình', path: ['contractId'] });
+  }
+  if (data.mode === 'Lập hộ mới' && data.primaryDOB) {
+    const dob = moment(data.primaryDOB, 'DD/MM/YYYY');
+    if (moment().diff(dob, 'years') < 18) {
+      if (!data.guardianName || data.guardianName.trim() === '') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Vui lòng nhập họ tên người bảo hộ', path: ['guardianName'] });
+      }
+      if (!data.guardianCCCD || data.guardianCCCD.length !== 12) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'CCCD người bảo hộ phải đủ 12 số', path: ['guardianCCCD'] });
+      }
+      if (!data.guardianDOB || data.guardianDOB.trim() === '') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Vui lòng chọn ngày sinh', path: ['guardianDOB'] });
+      } else {
+        const gDob = moment(data.guardianDOB, 'DD/MM/YYYY');
+        if (moment().diff(gDob, 'years') < 18) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Người bảo hộ phải từ 18 tuổi trở lên', path: ['guardianDOB'] });
+        }
+      }
+    }
   }
 });
 
@@ -46,6 +70,8 @@ export const AddRentalRecordScreen = observer(() => {
   const route = useRoute<any>();
   const initialMode: Mode = route.params?.mode || 'Lập hộ mới';
   
+  const scrollViewRef = useRef<ScrollView>(null);
+  
   const { properties } = useProperties();
   const { savePerson, people } = usePeople();
   const { contracts, saveContract } = useContracts();
@@ -55,7 +81,9 @@ export const AddRentalRecordScreen = observer(() => {
   const [showDOBPicker, setShowDOBPicker] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
 
-  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const [showGuardianDOBPicker, setShowGuardianDOBPicker] = useState(false);
+
+  const { control, handleSubmit, watch, setValue, clearErrors, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       mode: initialMode,
@@ -67,6 +95,11 @@ export const AddRentalRecordScreen = observer(() => {
       primaryDOB: '',
       primaryGender: 'Male',
       startDate: moment().format('DD/MM/YYYY'),
+      guardianName: '',
+      guardianCCCD: '',
+      guardianDOB: '',
+      guardianGender: 'Male',
+      guardianPhone: '',
     }
   });
 
@@ -76,6 +109,14 @@ export const AddRentalRecordScreen = observer(() => {
   const startDateValue = watch('startDate');
   const dobValue = watch('primaryDOB');
   const genderValue = watch('primaryGender');
+  const guardianDOBValue = watch('guardianDOB');
+  const guardianGenderValue = watch('guardianGender');
+
+  const isUnder18 = useMemo(() => {
+    if (!dobValue) return false;
+    const dob = moment(dobValue, 'DD/MM/YYYY');
+    return moment().diff(dob, 'years') < 18;
+  }, [dobValue]);
 
   const drafts = roommateDraftStore.get();
   // Filter out those who have entered data
@@ -87,6 +128,41 @@ export const AddRentalRecordScreen = observer(() => {
     clearRoommateDrafts();
     return () => clearRoommateDrafts();
   }, []);
+
+  const isSubmittedRef = useRef(false);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (isSubmittedRef.current) return;
+
+      const currentData = watch();
+      const hasUnsavedChanges = 
+        currentData.primaryName.trim() !== '' || 
+        currentData.primaryPhone?.trim() !== '' || 
+        currentData.primaryCCCD?.trim() !== '' || 
+        currentData.primaryDOB?.trim() !== '' || 
+        activeRoommates.length > 0;
+
+      if (!hasUnsavedChanges) return;
+
+      e.preventDefault();
+
+      Alert.alert(
+        'Xác nhận rời đi',
+        'Có thông tin chưa được lưu. Nếu bạn quay lại bây giờ, các thay đổi sẽ bị mất. Bạn có chắc chắn muốn rời đi?',
+        [
+          { text: 'Ở lại', style: 'cancel', onPress: () => {} },
+          { text: 'Rời đi', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ]
+      );
+    });
+    return unsubscribe;
+  }, [navigation, watch, activeRoommates.length]);
+
+  useEffect(() => {
+    clearErrors();
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  }, [mode, clearErrors]);
 
   const rentalGroups = useMemo(() => {
     // Collect active "Rental" contracts representing households
@@ -113,6 +189,12 @@ export const AddRentalRecordScreen = observer(() => {
 
       const now = Date.now();
       const primaryId = generateId();
+      
+      let noteStr = undefined;
+      if (isUnder18 && data.guardianName && data.guardianCCCD && data.guardianDOB) {
+        noteStr = `Người bảo hộ: ${data.guardianName} (CCCD: ${data.guardianCCCD}, SĐT: ${data.guardianPhone || 'Không có'}, NS: ${data.guardianDOB}, GT: ${data.guardianGender === 'Male' ? 'Nam' : data.guardianGender === 'Female' ? 'Nữ' : 'Khác'})`;
+      }
+
       const primaryPerson: Person = {
         id: primaryId,
         fullName: data.primaryName.trim(),
@@ -120,6 +202,7 @@ export const AddRentalRecordScreen = observer(() => {
         nationalId: data.primaryCCCD?.trim(),
         dateOfBirth: data.primaryDOB?.trim(),
         gender: data.primaryGender ? (data.primaryGender as any) : undefined,
+        note: noteStr,
         createdAt: now,
         updatedAt: now,
       };
@@ -155,7 +238,10 @@ export const AddRentalRecordScreen = observer(() => {
       saveContract(newContract);
 
       Alert.alert('Thành công', 'Đã lưu hồ sơ khách thuê và tạo hợp đồng!', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => {
+          isSubmittedRef.current = true;
+          navigation.goBack();
+        }}
       ]);
     } else {
       // Vào hộ đã có
@@ -190,7 +276,10 @@ export const AddRentalRecordScreen = observer(() => {
       saveContract(updatedContract);
 
       Alert.alert('Thành công', `Đã thêm ${newPerson.fullName} vào hộ ${selectedGroup.householderName}!`, [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => {
+          isSubmittedRef.current = true;
+          navigation.goBack();
+        }}
       ]);
     }
   };
@@ -222,11 +311,11 @@ export const AddRentalRecordScreen = observer(() => {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView ref={scrollViewRef} contentContainerStyle={styles.scrollContent}>
           
           {mode === 'Lập hộ mới' ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>1. Chọn Nhà/Phòng *</Text>
+              <Text style={styles.sectionTitle}>1. Chọn Nhà/Phòng <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
               {properties.length === 0 ? (
                 <Text style={styles.warningText}>Chưa có Nhà/Phòng. Hãy vào tab Nhà/Phòng để thêm trước.</Text>
               ) : !selectedPropertyId ? (
@@ -251,7 +340,7 @@ export const AddRentalRecordScreen = observer(() => {
             </View>
           ) : (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>1. Chọn Hộ gia đình (Phòng) *</Text>
+              <Text style={styles.sectionTitle}>1. Chọn Hộ gia đình (Phòng) <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
               {rentalGroups.length === 0 ? (
                 <Text style={styles.warningText}>Chưa có hộ gia đình nào đang thuê.</Text>
               ) : !selectedContractId ? (
@@ -285,7 +374,7 @@ export const AddRentalRecordScreen = observer(() => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{mode === 'Lập hộ mới' ? '2. Chủ hộ (Người đứng tên)' : '2. Thông tin Người mới'}</Text>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Họ và tên *</Text>
+              <Text style={styles.label}>Họ và tên <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
               <Controller
                 control={control}
                 name="primaryName"
@@ -320,7 +409,7 @@ export const AddRentalRecordScreen = observer(() => {
               {errors.primaryPhone && <Text style={styles.errorText}>{errors.primaryPhone.message}</Text>}
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Số CCCD (12 số)</Text>
+              <Text style={styles.label}>Số CCCD (12 số) <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
               <Controller
                 control={control}
                 name="primaryCCCD"
@@ -340,12 +429,13 @@ export const AddRentalRecordScreen = observer(() => {
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md }}>
               <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.label}>Ngày sinh</Text>
-                <TouchableOpacity style={styles.input} onPress={() => setShowDOBPicker(true)}>
+                <Text style={styles.label}>Ngày sinh <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
+                <TouchableOpacity style={[styles.input, errors.primaryDOB && styles.inputError]} onPress={() => setShowDOBPicker(true)}>
                   <Text style={{ color: dobValue ? Theme.colors.text : Theme.colors.textSecondary }}>
                     {dobValue || 'Chọn ngày'}
                   </Text>
                 </TouchableOpacity>
+                {errors.primaryDOB && <Text style={styles.errorText}>{errors.primaryDOB.message}</Text>}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>Giới tính</Text>
@@ -365,18 +455,135 @@ export const AddRentalRecordScreen = observer(() => {
                 </View>
               </View>
             </View>
+
+            {mode === 'Lập hộ mới' && isUnder18 && (
+              <View style={{ marginTop: Theme.spacing.sm, paddingTop: Theme.spacing.lg, borderTopWidth: 1, borderTopColor: Theme.colors.border, borderStyle: 'dashed' }}>
+                <Text style={{ fontSize: Theme.typography.size.body, fontWeight: 'bold', color: Theme.colors.primaryDark, marginBottom: 4 }}>
+                  Thông tin Người Bảo Hộ
+                </Text>
+                <Text style={{ fontSize: 13, color: Theme.colors.textSecondary, fontStyle: 'italic', marginBottom: Theme.spacing.md }}>
+                  Bắt buộc nhập do chủ hộ chưa đủ 18 tuổi.
+                </Text>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Họ tên người bảo hộ <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
+                  <Controller
+                    control={control}
+                    name="guardianName"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <TextInput
+                        style={[styles.input, errors.guardianName && styles.inputError]}
+                        placeholder="Nhập họ tên người bảo hộ"
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        value={value}
+                      />
+                    )}
+                  />
+                  {errors.guardianName && <Text style={styles.errorText}>{errors.guardianName.message}</Text>}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Số điện thoại người bảo hộ</Text>
+                  <Controller
+                    control={control}
+                    name="guardianPhone"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <TextInput
+                        style={[styles.input, errors.guardianPhone && styles.inputError]}
+                        placeholder="Nhập SĐT"
+                        keyboardType="phone-pad"
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        value={value}
+                      />
+                    )}
+                  />
+                  {errors.guardianPhone && <Text style={styles.errorText}>{errors.guardianPhone.message}</Text>}
+                </View>
+
+                <View style={[styles.inputGroup, { marginBottom: Theme.spacing.md }]}>
+                  <Text style={styles.label}>Số CCCD người bảo hộ (12 số) <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
+                  <Controller
+                    control={control}
+                    name="guardianCCCD"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <TextInput
+                        style={[styles.input, errors.guardianCCCD && styles.inputError]}
+                        placeholder="Nhập CCCD"
+                        keyboardType="number-pad"
+                        maxLength={12}
+                        onBlur={onBlur}
+                        onChangeText={onChange}
+                        value={value}
+                      />
+                    )}
+                  />
+                  {errors.guardianCCCD && <Text style={styles.errorText}>{errors.guardianCCCD.message}</Text>}
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 0 }}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={styles.label}>Ngày sinh <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
+                    <TouchableOpacity style={[styles.input, errors.guardianDOB && styles.inputError]} onPress={() => setShowGuardianDOBPicker(true)}>
+                      <Text style={{ color: guardianDOBValue ? Theme.colors.text : Theme.colors.textSecondary }}>
+                        {guardianDOBValue || 'Chọn ngày'}
+                      </Text>
+                    </TouchableOpacity>
+                    {errors.guardianDOB && <Text style={styles.errorText}>{errors.guardianDOB.message}</Text>}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Giới tính</Text>
+                    <View style={{ flexDirection: 'row', height: 48 }}>
+                      <TouchableOpacity 
+                        style={[styles.genderButton, guardianGenderValue === 'Male' && styles.genderButtonActive, { borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRightWidth: 0 }]}
+                        onPress={() => setValue('guardianGender', 'Male')}
+                      >
+                        <Text style={[styles.genderText, guardianGenderValue === 'Male' && styles.genderTextActive]}>Nam</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.genderButton, guardianGenderValue === 'Female' && styles.genderButtonActive, { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
+                        onPress={() => setValue('guardianGender', 'Female')}
+                      >
+                        <Text style={[styles.genderText, guardianGenderValue === 'Female' && styles.genderTextActive]}>Nữ</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
+
+          {showGuardianDOBPicker && (
+            <DateTimePicker
+              value={guardianDOBValue ? moment(guardianDOBValue, 'DD/MM/YYYY').toDate() : new Date()}
+              mode="date"
+              display="default"
+              maximumDate={new Date()}
+              positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
+              negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
+              onChange={(event, selectedDate) => {
+                setShowGuardianDOBPicker(false);
+                if (event.type === 'set' && selectedDate) {
+                  setValue('guardianDOB', moment(selectedDate).format('DD/MM/YYYY'));
+                }
+              }}
+            />
+          )}
 
           {showDOBPicker && (
             <DateTimePicker
-              value={dobValue ? moment(dobValue, 'DD/MM/YYYY').toDate() : new Date(1990, 0, 1)}
+              value={dobValue ? moment(dobValue, 'DD/MM/YYYY').toDate() : new Date()}
               mode="date"
               display="default"
+              maximumDate={new Date()}
               positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
               negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
               onChange={(event, selectedDate) => {
                 setShowDOBPicker(false);
-                if (selectedDate) setValue('primaryDOB', moment(selectedDate).format('DD/MM/YYYY'));
+                if (event.type === 'set' && selectedDate) {
+                  setValue('primaryDOB', moment(selectedDate).format('DD/MM/YYYY'));
+                }
               }}
             />
           )}
@@ -414,7 +621,7 @@ export const AddRentalRecordScreen = observer(() => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{mode === 'Lập hộ mới' ? '4. Thông tin hợp đồng' : '3. Thời gian gia nhập'}</Text>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Ngày bắt đầu ở *</Text>
+              <Text style={styles.label}>Ngày bắt đầu ở <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
               <TouchableOpacity style={styles.input} onPress={() => setShowStartDatePicker(true)}>
                 <Text style={{ color: startDateValue ? Theme.colors.text : Theme.colors.textSecondary }}>
                   {startDateValue || 'Chọn ngày'}
@@ -432,7 +639,9 @@ export const AddRentalRecordScreen = observer(() => {
               negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
               onChange={(event, selectedDate) => {
                 setShowStartDatePicker(false);
-                if (selectedDate) setValue('startDate', moment(selectedDate).format('DD/MM/YYYY'));
+                if (event.type === 'set' && selectedDate) {
+                  setValue('startDate', moment(selectedDate).format('DD/MM/YYYY'));
+                }
               }}
             />
           )}

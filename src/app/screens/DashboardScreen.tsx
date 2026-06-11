@@ -266,7 +266,7 @@ export function DashboardScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 400 }}>
+            <ScrollView style={{ maxHeight: '50%' }}>
               {notifications.length === 0 ? (
                 <Text
                   style={{

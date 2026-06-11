@@ -274,7 +274,7 @@ export function AddContractScreen() {
       {/* Group Selection Modal */}
       <Modal visible={showGroupModal} transparent={true} animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.bottomSheet, { height: '80%' }]}>
+          <View style={[styles.bottomSheet, { maxHeight: '60%' }]}>
             <View style={styles.bottomSheetHeader}>
               <Text style={styles.bottomSheetTitle}>Chọn Hồ sơ (Chủ hộ & Phòng)</Text>
               <TouchableOpacity onPress={() => setShowGroupModal(false)}>
@@ -283,7 +283,7 @@ export function AddContractScreen() {
             </View>
             
             <View style={styles.searchContainer}>
-              <Icon name="search" size={20} color={Theme.colors.textSecondary} />
+              <Icon name="search" size={16} color={Theme.colors.textSecondary} />
               <TextInput 
                 style={styles.searchInput}
                 placeholder="Tìm tên, CCCD, số phòng..."

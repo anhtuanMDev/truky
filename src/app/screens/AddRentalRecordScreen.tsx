@@ -1223,7 +1223,7 @@ export const AddRentalRecordScreen = observer(() => {
                 </Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 400 }}>
+            <ScrollView style={{ maxHeight: '50%' }}>
               {propertiesWithStatus.map(p => (
                 <TouchableOpacity
                   key={p.id}
@@ -1241,7 +1241,7 @@ export const AddRentalRecordScreen = observer(() => {
                 >
                   <Icon
                     name="home"
-                    size={20}
+                    size={16}
                     color={
                       selectedPropertyId === p.id
                         ? Theme.colors.primary
@@ -1295,7 +1295,7 @@ export const AddRentalRecordScreen = observer(() => {
                 </Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 400 }}>
+            <ScrollView style={{ maxHeight: '50%' }}>
               {rentalGroups.map(g => (
                 <TouchableOpacity
                   key={g.id}
@@ -1310,7 +1310,7 @@ export const AddRentalRecordScreen = observer(() => {
                 >
                   <Icon
                     name="user"
-                    size={20}
+                    size={16}
                     color={
                       selectedContractId === g.id
                         ? Theme.colors.primary

@@ -36,7 +36,7 @@ export function BottomTabNavigator() {
         component={DashboardScreen} 
         options={{
           tabBarLabel: 'Tổng quan',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => <Icon name="home" size={size} color={color} />
+          tabBarIcon: ({ color }: { color: string }) => <Icon name="home" size={20} color={color} />
         }}
       />
       <Tab.Screen 
@@ -44,7 +44,7 @@ export function BottomTabNavigator() {
         component={PropertyListScreen} 
         options={{
           tabBarLabel: 'Nhà/Phòng',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => <Icon name="home" size={size} color={color} />
+          tabBarIcon: ({ color }: { color: string }) => <Icon name="home" size={20} color={color} />
         }}
       />
       <Tab.Screen 
@@ -52,7 +52,7 @@ export function BottomTabNavigator() {
         component={PeopleListScreen} 
         options={{
           tabBarLabel: 'Khách thuê',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => <Icon name="user" size={size} color={color} />
+          tabBarIcon: ({ color }: { color: string }) => <Icon name="user" size={20} color={color} />
         }}
       />
       <Tab.Screen 
@@ -60,7 +60,7 @@ export function BottomTabNavigator() {
         component={ContractListScreen} 
         options={{
           tabBarLabel: 'Hợp đồng',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => <Icon name="file-text" size={size} color={color} />
+          tabBarIcon: ({ color }: { color: string }) => <Icon name="file-text" size={20} color={color} />
         }}
       />
     </Tab.Navigator>

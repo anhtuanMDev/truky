@@ -23,7 +23,6 @@ import { useProperties } from '../../hooks/useProperties';
 export function DashboardScreen() {
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showNotifications, setShowNotifications] = useState(false);
   const { people } = usePeople();
   const { contracts } = useContracts();
   const { properties } = useProperties();
@@ -56,14 +55,24 @@ export function DashboardScreen() {
     // Optional: could trigger a full search page
   };
 
-  const notifications = [
-    { id: '1', message: '2 hợp đồng sắp hết hạn', type: 'warning' as const },
-    {
-      id: '2',
-      message: '1 khách thuê chưa khai báo tạm trú',
-      type: 'danger' as const,
-    },
-  ];
+  const notifications = useMemo(() => {
+    const pendingList: any[] = [];
+    for (const p of properties) {
+      const propertyContracts = contracts.filter(c => c.propertyId === p.id && c.type === 'Rental');
+      if (propertyContracts.length > 0) {
+        propertyContracts.sort((a, b) => b.createdAt - a.createdAt);
+        const latestContract = propertyContracts[0];
+        if (latestContract.contractStatus === 'Active' && !latestContract.releaseDate) {
+          pendingList.push({
+            id: `pending_${latestContract.id}`,
+            message: `Phòng ${p.title} chưa có ngày hẹn trả hợp đồng đăng ký tạm trú (DVC)`,
+            type: 'warning' as const
+          });
+        }
+      }
+    }
+    return pendingList;
+  }, [properties, contracts]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -98,7 +107,7 @@ export function DashboardScreen() {
           </View>
           <TouchableOpacity
             style={styles.bellButton}
-            onPress={() => setShowNotifications(true)}
+            onPress={() => navigation.navigate('Notifications')}
           >
             <Text style={{ fontSize: 20 }}>🔔</Text>
             {notifications.length > 0 && (
@@ -180,7 +189,7 @@ export function DashboardScreen() {
                       color={Theme.colors.text}
                     />
                     <View style={styles.resultTextContainer}>
-                      <Text style={styles.resultTitle}>Hợp đồng {c.type}</Text>
+                      <Text style={styles.resultTitle}>Hợp đồng {c.type === 'Rental' ? 'Thuê nhà' : c.type}</Text>
                       <Text style={styles.resultSubtitle}>
                         Mã cổng: {c.govContractId || 'Chưa ĐK'}
                       </Text>
@@ -245,49 +254,6 @@ export function DashboardScreen() {
         )}
       </ScrollView>
 
-      {/* Notifications Modal */}
-      <Modal
-        visible={showNotifications}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.bottomSheet}>
-            <View style={styles.bottomSheetHeader}>
-              <Text style={styles.bottomSheetTitle}>Thông báo</Text>
-              <TouchableOpacity onPress={() => setShowNotifications(false)}>
-                <Text
-                  style={{
-                    color: Theme.colors.textSecondary,
-                    fontWeight: 'bold',
-                  }}
-                >
-                  Đóng
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ maxHeight: '50%' }}>
-              {notifications.length === 0 ? (
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    color: Theme.colors.textSecondary,
-                    marginTop: 20,
-                  }}
-                >
-                  Không có thông báo mới.
-                </Text>
-              ) : (
-                notifications.map(n => (
-                  <View key={n.id} style={{ marginBottom: 12 }}>
-                    <AlertCard message={n.message} type={n.type} />
-                  </View>
-                ))
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

@@ -43,7 +43,7 @@ export function ContractListScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.name} numberOfLines={1}>{title}</Text>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{item.type}</Text>
+            <Text style={styles.statusText}>{item.type === 'Rental' ? 'Thuê nhà' : item.type}</Text>
           </View>
         </View>
         <View style={styles.infoRow}>

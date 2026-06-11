@@ -11,6 +11,7 @@ import { CT01PreviewScreen } from '../screens/CT01PreviewScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AddRentalRecordScreen } from '../screens/AddRentalRecordScreen';
 import { AddRoommatesScreen } from '../screens/AddRoommatesScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -28,6 +29,7 @@ export function RootNavigator() {
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="AddRentalRecord" component={AddRentalRecordScreen} />
         <Stack.Screen name="AddRoommates" component={AddRoommatesScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

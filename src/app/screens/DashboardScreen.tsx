@@ -147,7 +147,7 @@ export function DashboardScreen() {
                   <TouchableOpacity
                     key={p.id}
                     style={styles.resultItem}
-                    onPress={() => navigation.navigate('PropertiesTab')}
+                    onPress={() => navigation.navigate('PropertyDetails', { propertyId: p.id })}
                   >
                     <Icon name="home" size={16} color={Theme.colors.success} />
                     <View style={styles.resultTextContainer}>

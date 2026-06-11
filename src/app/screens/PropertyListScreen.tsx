@@ -12,7 +12,11 @@ export function PropertyListScreen() {
   const navigation = useNavigation<any>();
 
   const renderItem = ({ item }: { item: Property }) => (
-    <TouchableOpacity style={styles.card} activeOpacity={0.7}>
+    <TouchableOpacity 
+      style={styles.card} 
+      activeOpacity={0.7}
+      onPress={() => navigation.navigate('PropertyDetails', { propertyId: item.id })}
+    >
       <View style={styles.cardHeader}>
         <Text style={styles.name}>{item.title}</Text>
       </View>

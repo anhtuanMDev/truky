@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BottomTabNavigator } from './BottomTabNavigator';
 import { PersonDetailsScreen } from '../screens/PersonDetailsScreen';
 import { AddPropertyScreen } from '../screens/AddPropertyScreen';
+import { PropertyDetailsScreen } from '../screens/PropertyDetailsScreen';
 import { AddContractScreen } from '../screens/AddContractScreen';
 import { ContractDetailsScreen } from '../screens/ContractDetailsScreen';
 import { CT01PreviewScreen } from '../screens/CT01PreviewScreen';
@@ -20,6 +21,7 @@ export function RootNavigator() {
         <Stack.Screen name="Root" component={BottomTabNavigator} />
         <Stack.Screen name="PersonDetails" component={PersonDetailsScreen} />
         <Stack.Screen name="AddProperty" component={AddPropertyScreen} />
+        <Stack.Screen name="PropertyDetails" component={PropertyDetailsScreen} />
         <Stack.Screen name="AddContract" component={AddContractScreen} />
         <Stack.Screen name="ContractDetails" component={ContractDetailsScreen} />
         <Stack.Screen name="CT01Preview" component={CT01PreviewScreen} />

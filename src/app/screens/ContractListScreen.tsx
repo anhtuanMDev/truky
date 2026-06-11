@@ -35,7 +35,11 @@ export function ContractListScreen() {
     const title = `${property?.title || 'Phòng trống'} - ${primaryTenant?.fullName || 'Chưa có tên'}`;
 
     return (
-      <TouchableOpacity style={styles.card} activeOpacity={0.7}>
+      <TouchableOpacity 
+        style={styles.card} 
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('ContractDetails', { contractId: item.id })}
+      >
         <View style={styles.cardHeader}>
           <Text style={styles.name} numberOfLines={1}>{title}</Text>
           <View style={styles.statusBadge}>

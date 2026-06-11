@@ -13,6 +13,7 @@ export const AddRoommatesScreen = observer(() => {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [initialStateStr] = useState(() => JSON.stringify(roommateDraftStore.get()));
   const drafts = roommateDraftStore.get();
   const activeRoommate = drafts[activeTab];
 
@@ -32,7 +33,11 @@ export const AddRoommatesScreen = observer(() => {
   };
 
   const isPartiallyFilled = (r: typeof activeRoommate) => {
-    return r.fullName.trim() !== '' || r.nationalId.trim() !== '' || r.dateOfBirth.trim() !== '' || r.gender.trim() !== '' || r.relationshipToHouseholder.trim() !== '';
+    return (r.fullName || '').trim() !== '' || 
+           (r.nationalId || '').trim() !== '' || 
+           (r.dateOfBirth || '').trim() !== '' || 
+           (r.gender || '').trim() !== '' || 
+           (r.relationshipToHouseholder || '').trim() !== '';
   };
 
   const handleSave = () => {
@@ -40,7 +45,7 @@ export const AddRoommatesScreen = observer(() => {
     for (let i = 0; i < drafts.length; i++) {
       const r = drafts[i];
       if (isPartiallyFilled(r)) {
-        if (!r.fullName.trim()) {
+        if (!(r.fullName || '').trim()) {
           setActiveTab(i);
           return Alert.alert('Lỗi', `Người số ${i + 1} chưa nhập Họ và tên.`);
         }
@@ -53,10 +58,34 @@ export const AddRoommatesScreen = observer(() => {
     navigation.goBack();
   };
 
+  const handleBack = () => {
+    const currentStateStr = JSON.stringify(roommateDraftStore.get());
+    if (currentStateStr !== initialStateStr) {
+      Alert.alert(
+        'Xác nhận thoát',
+        'Dữ liệu chưa được lưu có thể bị mất. Bạn có chắc chắn muốn thoát?',
+        [
+          { text: 'Ở lại', style: 'cancel' },
+          { 
+            text: 'Thoát', 
+            style: 'destructive',
+            onPress: () => {
+              // Restore initial state so changes are discarded
+              roommateDraftStore.set(JSON.parse(initialStateStr));
+              navigation.goBack();
+            }
+          }
+        ]
+      );
+    } else {
+      navigation.goBack();
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleSave}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Icon name="chevron-left" size={24} color={Theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Thêm Người Ở Ghép</Text>

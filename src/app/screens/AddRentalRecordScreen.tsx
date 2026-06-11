@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { observer } from '@legendapp/state/react';
@@ -21,6 +21,7 @@ export const AddRentalRecordScreen = observer(() => {
   const { saveContract } = useContracts();
 
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+  const [showPropertyModal, setShowPropertyModal] = useState<boolean>(false);
   
   // Primary Tenant
   const [primaryName, setPrimaryName] = useState('');
@@ -125,17 +126,23 @@ export const AddRentalRecordScreen = observer(() => {
             <Text style={styles.sectionTitle}>1. Chọn Nhà/Phòng</Text>
             {properties.length === 0 ? (
               <Text style={styles.warningText}>Chưa có Nhà/Phòng. Hãy vào tab Nhà/Phòng để thêm trước.</Text>
+            ) : !selectedPropertyId ? (
+              <TouchableOpacity style={styles.textButton} onPress={() => setShowPropertyModal(true)}>
+                <Icon name="search" size={20} color={Theme.colors.primary} />
+                <Text style={styles.textButtonLabel}>Nhấn để chọn phòng</Text>
+              </TouchableOpacity>
             ) : (
-              properties.map(p => (
-                <TouchableOpacity 
-                  key={p.id} 
-                  style={[styles.selectionItem, selectedPropertyId === p.id && styles.selectionItemActive]}
-                  onPress={() => setSelectedPropertyId(p.id)}
-                >
-                  <Icon name="home" size={20} color={selectedPropertyId === p.id ? Theme.colors.primary : Theme.colors.textSecondary} />
-                  <Text style={[styles.selectionText, selectedPropertyId === p.id && styles.selectionTextActive]}>{p.title}</Text>
+              <View style={styles.selectedPropertyContainer}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <Icon name="home" size={24} color={Theme.colors.primary} />
+                  <Text style={styles.selectedPropertyText}>
+                    {properties.find(p => p.id === selectedPropertyId)?.title}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowPropertyModal(true)}>
+                  <Text style={styles.addText}>Thay đổi</Text>
                 </TouchableOpacity>
-              ))
+              </View>
             )}
           </View>
 
@@ -259,6 +266,36 @@ export const AddRentalRecordScreen = observer(() => {
           <Text style={styles.submitButtonText}>Lưu Hồ Sơ & Tạo Hợp Đồng</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Property Selection Bottom Sheet Modal */}
+      <Modal visible={showPropertyModal} transparent={true} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.bottomSheetHeader}>
+              <Text style={styles.bottomSheetTitle}>Chọn Nhà/Phòng</Text>
+              <TouchableOpacity onPress={() => setShowPropertyModal(false)}>
+                <Text style={{ color: Theme.colors.textSecondary, fontWeight: 'bold' }}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {properties.map(p => (
+                <TouchableOpacity 
+                  key={p.id} 
+                  style={[styles.selectionItem, selectedPropertyId === p.id && styles.selectionItemActive]}
+                  onPress={() => {
+                    setSelectedPropertyId(p.id);
+                    setShowPropertyModal(false);
+                  }}
+                >
+                  <Icon name="home" size={20} color={selectedPropertyId === p.id ? Theme.colors.primary : Theme.colors.textSecondary} />
+                  <Text style={[styles.selectionText, selectedPropertyId === p.id && styles.selectionTextActive]}>{p.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 });
@@ -292,4 +329,12 @@ const styles = StyleSheet.create({
   footer: { padding: Theme.spacing.lg, backgroundColor: Theme.colors.surface, borderTopWidth: 1, borderTopColor: Theme.colors.border },
   submitButton: { backgroundColor: Theme.colors.primary, borderRadius: Theme.borderRadius.md, paddingVertical: 16, alignItems: 'center' },
   submitButtonText: { color: Theme.colors.surface, fontSize: Theme.typography.size.body, fontWeight: 'bold' },
+  textButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  textButtonLabel: { marginLeft: 8, fontSize: Theme.typography.size.body, color: Theme.colors.primary, fontWeight: '500' },
+  selectedPropertyContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Theme.spacing.md, backgroundColor: Theme.colors.primaryLight, borderRadius: Theme.borderRadius.md, borderWidth: 1, borderColor: Theme.colors.primary },
+  selectedPropertyText: { marginLeft: 12, fontSize: Theme.typography.size.body, color: Theme.colors.primaryDark, fontWeight: 'bold' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  bottomSheet: { backgroundColor: Theme.colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Theme.spacing.lg },
+  bottomSheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Theme.spacing.lg },
+  bottomSheetTitle: { fontSize: Theme.typography.size.subtitle, fontWeight: 'bold', color: Theme.colors.text },
 });

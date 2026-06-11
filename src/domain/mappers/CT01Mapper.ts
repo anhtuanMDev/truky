@@ -33,7 +33,7 @@ export class CT01Mapper {
     householder?: Person
   ): CT01FormData {
     return {
-      authorityName: residenceCase.authorityName || `Công an phường/xã ${property.ward || '...'}, quận/huyện ${property.district || '...'}`,
+      authorityName: residenceCase.authorityName || `Công an phường/xã ${property.ward || '...'}, ${property.city || '...'}`,
       fullName: primaryPerson.fullName.toUpperCase(),
       dob: primaryPerson.dateOfBirth ? moment(primaryPerson.dateOfBirth).format('DD/MM/YYYY') : '',
       gender: primaryPerson.gender === 'Male' ? 'Nam' : primaryPerson.gender === 'Female' ? 'Nữ' : '',

@@ -26,7 +26,6 @@ export const PropertySchema = z.object({
   title: z.string().min(1, 'Vui lòng nhập tên nhà/căn hộ'),
   addressLine: z.string().min(1, 'Vui lòng nhập địa chỉ'),
   ward: z.string().optional(),
-  district: z.string().optional(),
   city: z.string().optional(),
   fullAddress: z.string().optional(),
   ownerPersonId: z.string().optional(),

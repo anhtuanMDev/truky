@@ -22,11 +22,12 @@ export function AddContractScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showGroupModal, setShowGroupModal] = useState(false);
 
-  const [contractType, setContractType] = useState<'Rental' | 'Borrow' | 'Stay'>('Rental');
+  const [contractType, setContractType] = useState<Contract['type']>('Đăng ký tạm trú');
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
   const [startDate, setStartDate] = useState(moment().format('DD/MM/YYYY'));
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [durationYears, setDurationYears] = useState('1');
 
   // Group existing contracts to represent "Householder + Room"
   const rentalGroups = useMemo(() => {
@@ -64,6 +65,15 @@ export function AddContractScreen() {
       return;
     }
 
+    const duration = parseInt(durationYears, 10);
+    if (isNaN(duration) || duration <= 0 || duration > 2) {
+      Alert.alert('Lỗi', 'Thời gian đăng ký tối đa là 2 năm và phải lớn hơn 0.');
+      return;
+    }
+
+    const startMoment = moment(startDate, 'DD/MM/YYYY');
+    const endDate = startMoment.add(duration, 'years').format('DD/MM/YYYY');
+
     const now = Date.now();
     const newContract: Contract = {
       id: generateId(),
@@ -72,6 +82,7 @@ export function AddContractScreen() {
       tenantPersonIds: selectedGroup.sourceContract.tenantPersonIds,
       type: contractType,
       startDate,
+      endDate,
       contractStatus: 'Active',
       createdAt: now,
       updatedAt: now,
@@ -84,13 +95,8 @@ export function AddContractScreen() {
     ]);
   };
 
-  const getContractTypeName = (type: 'Rental' | 'Borrow' | 'Stay') => {
-    switch (type) {
-      case 'Rental': return 'Thuê';
-      case 'Borrow': return 'Cho mượn';
-      case 'Stay': return 'Ở nhờ';
-      default: return 'Khác';
-    }
+  const getContractTypeName = (type: Contract['type']) => {
+    return type; // Now we just use the string directly since it's in Vietnamese
   };
 
   return (
@@ -152,26 +158,38 @@ export function AddContractScreen() {
               
               {showTypeDropdown && (
                 <View style={styles.dropdownList}>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Rental'); setShowTypeDropdown(false); }}>
-                    <Text style={[styles.dropdownItemText, contractType === 'Rental' && styles.dropdownItemTextActive]}>Thuê</Text>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Đăng ký tạm trú'); setShowTypeDropdown(false); }}>
+                    <Text style={[styles.dropdownItemText, contractType === 'Đăng ký tạm trú' && styles.dropdownItemTextActive]}>Đăng ký tạm trú</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Borrow'); setShowTypeDropdown(false); }}>
-                    <Text style={[styles.dropdownItemText, contractType === 'Borrow' && styles.dropdownItemTextActive]}>Cho mượn</Text>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Gia hạn tạm trú'); setShowTypeDropdown(false); }}>
+                    <Text style={[styles.dropdownItemText, contractType === 'Gia hạn tạm trú' && styles.dropdownItemTextActive]}>Gia hạn tạm trú</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.dropdownItem, { borderBottomWidth: 0 }]} onPress={() => { setContractType('Stay'); setShowTypeDropdown(false); }}>
-                    <Text style={[styles.dropdownItemText, contractType === 'Stay' && styles.dropdownItemTextActive]}>Ở nhờ</Text>
+                  <TouchableOpacity style={[styles.dropdownItem, { borderBottomWidth: 0 }]} onPress={() => { setContractType('Xóa tạm trú'); setShowTypeDropdown(false); }}>
+                    <Text style={[styles.dropdownItemText, contractType === 'Xóa tạm trú' && styles.dropdownItemTextActive]}>Xóa tạm trú</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Ngày bắt đầu</Text>
-              <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-                <Text style={{ color: startDate ? Theme.colors.text : Theme.colors.textSecondary }}>
-                  {startDate || 'Chọn ngày'}
-                </Text>
-              </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md }}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.label}>Ngày bắt đầu</Text>
+                <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+                  <Text style={{ color: startDate ? Theme.colors.text : Theme.colors.textSecondary }}>
+                    {startDate || 'Chọn ngày'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Thời gian (năm)</Text>
+                <TextInput 
+                  style={styles.input} 
+                  value={durationYears} 
+                  onChangeText={setDurationYears} 
+                  keyboardType="numeric"
+                  maxLength={1}
+                />
+              </View>
             </View>
             
             {showDatePicker && (

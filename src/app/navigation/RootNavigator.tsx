@@ -2,7 +2,6 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BottomTabNavigator } from './BottomTabNavigator';
-import { AddPersonScreen } from '../screens/AddPersonScreen';
 import { PersonDetailsScreen } from '../screens/PersonDetailsScreen';
 import { AddPropertyScreen } from '../screens/AddPropertyScreen';
 import { AddContractScreen } from '../screens/AddContractScreen';
@@ -19,7 +18,6 @@ export function RootNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Root" component={BottomTabNavigator} />
-        <Stack.Screen name="AddPerson" component={AddPersonScreen} />
         <Stack.Screen name="PersonDetails" component={PersonDetailsScreen} />
         <Stack.Screen name="AddProperty" component={AddPropertyScreen} />
         <Stack.Screen name="AddContract" component={AddContractScreen} />

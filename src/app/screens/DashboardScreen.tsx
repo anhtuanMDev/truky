@@ -144,7 +144,7 @@ export function DashboardScreen() {
                 title="Thêm hồ sơ thuê nhà"
                 subtitle="Đăng ký khách, ghép phòng, lập HĐ"
                 icon="plus"
-                onPress={() => navigation.navigate('AddRentalRecord')}
+                onPress={() => navigation.navigate('AddRentalRecord', { mode: 'Lập hộ mới' })}
               />
               <ActionCard 
                 title="Tra cứu thông tin"

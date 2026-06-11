@@ -21,7 +21,6 @@ export interface Property {
   title: string;
   addressLine: string;
   ward?: string;
-  district?: string;
   city?: string;
   fullAddress?: string;
   ownerPersonId?: string;
@@ -50,7 +49,7 @@ export interface Contract {
   roomId?: string;
   landlordPersonId: string;
   tenantPersonIds: string[];
-  type: 'Rental' | 'Borrow' | 'Stay';
+  type: 'Rental' | 'Borrow' | 'Stay' | 'Đăng ký tạm trú' | 'Gia hạn tạm trú' | 'Xóa tạm trú' | 'Khác';
   startDate: string;
   endDate?: string;
   rentPrice?: number;

@@ -39,7 +39,7 @@ export function PeopleListScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Khách thuê</Text>
-        <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddPerson')}>
+        <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddRentalRecord', { mode: 'Vào hộ đã có' })}>
           <Icon name="plus" size={24} color={Theme.colors.primary} />
         </TouchableOpacity>
       </View>

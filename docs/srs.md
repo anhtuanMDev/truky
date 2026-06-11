@@ -48,7 +48,7 @@ This document specifies the functional and non-functional requirements for a loc
 
 - **Fields:**
   - `Property_ID` (Primary Key)
-  - [cite_start]`Full_Address` (Text) - _Defaults to: 115/17 Đường số 5 Khu phố 21 Phường Linh Xuân, Tp Thủ Đức, TP Hồ Chí Minh_ [cite: 27]
+  - [cite_start]`Full_Address` (Text) - _Defaults to: 123 Đường ABC, Phường XYZ_ [cite: 27]
 
 ### 3.3 Tenant Household (`Tenant_Household`)
 

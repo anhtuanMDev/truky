@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { observer } from '@legendapp/state/react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
 import { useProperties } from '../../hooks/useProperties';
@@ -11,28 +14,68 @@ import { useContracts } from '../../hooks/useContracts';
 import { generateId } from '../../utils/uuid';
 import { Person, Contract } from '../../domain/models/types';
 import { roommateDraftStore, clearRoommateDrafts } from '../../store/legend/roommateDraftStore';
+import { CCCDSchema } from '../../domain/schemas/validation';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
 
+type Mode = 'Lập hộ mới' | 'Vào hộ đã có';
+
+const FormSchema = z.object({
+  mode: z.enum(['Lập hộ mới', 'Vào hộ đã có']),
+  propertyId: z.string().optional(),
+  contractId: z.string().optional(),
+  primaryName: z.string().min(2, 'Vui lòng nhập họ tên'),
+  primaryPhone: z.string().optional(),
+  primaryCCCD: CCCDSchema.optional().or(z.literal('')),
+  primaryDOB: z.string().optional(),
+  primaryGender: z.enum(['Male', 'Female', 'Other']).optional(),
+  startDate: z.string().min(1, 'Vui lòng chọn ngày'),
+}).superRefine((data, ctx) => {
+  if (data.mode === 'Lập hộ mới' && !data.propertyId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Vui lòng chọn nhà/phòng', path: ['propertyId'] });
+  }
+  if (data.mode === 'Vào hộ đã có' && !data.contractId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Vui lòng chọn hộ gia đình', path: ['contractId'] });
+  }
+});
+
+type FormData = z.infer<typeof FormSchema>;
+
 export const AddRentalRecordScreen = observer(() => {
   const navigation = useNavigation<any>();
-  const { properties } = useProperties();
-  const { savePerson } = usePeople();
-  const { saveContract } = useContracts();
-
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
-  const [showPropertyModal, setShowPropertyModal] = useState<boolean>(false);
+  const route = useRoute<any>();
+  const initialMode: Mode = route.params?.mode || 'Lập hộ mới';
   
-  // Primary Tenant
-  const [primaryName, setPrimaryName] = useState('');
-  const [primaryPhone, setPrimaryPhone] = useState('');
-  const [primaryCCCD, setPrimaryCCCD] = useState('');
-  const [primaryDOB, setPrimaryDOB] = useState('');
-  const [primaryGender, setPrimaryGender] = useState('');
+  const { properties } = useProperties();
+  const { savePerson, people } = usePeople();
+  const { contracts, saveContract } = useContracts();
 
-  const [startDate, setStartDate] = useState(moment().format('DD/MM/YYYY'));
+  const [showPropertyModal, setShowPropertyModal] = useState<boolean>(false);
+  const [showGroupModal, setShowGroupModal] = useState<boolean>(false);
   const [showDOBPicker, setShowDOBPicker] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+
+  const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(FormSchema),
+    defaultValues: {
+      mode: initialMode,
+      propertyId: '',
+      contractId: '',
+      primaryName: '',
+      primaryPhone: '',
+      primaryCCCD: '',
+      primaryDOB: '',
+      primaryGender: 'Male',
+      startDate: moment().format('DD/MM/YYYY'),
+    }
+  });
+
+  const mode = watch('mode');
+  const selectedPropertyId = watch('propertyId');
+  const selectedContractId = watch('contractId');
+  const startDateValue = watch('startDate');
+  const dobValue = watch('primaryDOB');
+  const genderValue = watch('primaryGender');
 
   const drafts = roommateDraftStore.get();
   // Filter out those who have entered data
@@ -41,71 +84,115 @@ export const AddRentalRecordScreen = observer(() => {
   );
 
   useEffect(() => {
-    // Clear drafts when this screen mounts/unmounts
     clearRoommateDrafts();
     return () => clearRoommateDrafts();
   }, []);
 
-  const handleSave = () => {
-    if (!selectedPropertyId) return Alert.alert('Lỗi', 'Vui lòng chọn nhà/phòng.');
-    if (!primaryName.trim()) return Alert.alert('Lỗi', 'Vui lòng nhập tên chủ hộ.');
-    if (primaryCCCD && primaryCCCD.length !== 12) return Alert.alert('Lỗi', 'CCCD chủ hộ phải đủ 12 số.');
-    
-    for (const r of activeRoommates) {
-      if (!r.fullName.trim()) return Alert.alert('Lỗi', 'Vui lòng nhập tên cho tất cả người ở ghép đã chọn.');
-      if (r.nationalId && r.nationalId.length !== 12) return Alert.alert('Lỗi', `CCCD của ${r.fullName} phải đủ 12 số.`);
-    }
+  const rentalGroups = useMemo(() => {
+    // Collect active "Rental" contracts representing households
+    const activeRentals = contracts.filter(c => c.type === 'Rental' && c.contractStatus === 'Active');
+    return activeRentals.map(c => {
+      const property = properties.find(p => p.id === c.propertyId);
+      const primaryTenant = people.find(p => p.id === c.tenantPersonIds[0]);
+      return {
+        id: c.id,
+        contract: c,
+        propertyTitle: property?.title || 'Phòng không xác định',
+        householderName: primaryTenant?.fullName || 'Chưa có chủ hộ',
+        currentTenantCount: c.tenantPersonIds.length
+      };
+    });
+  }, [contracts, properties, people]);
 
-    const now = Date.now();
-    
-    // 1. Create Primary Tenant
-    const primaryId = generateId();
-    const primaryPerson: Person = {
-      id: primaryId,
-      fullName: primaryName.trim(),
-      phone: primaryPhone.trim(),
-      nationalId: primaryCCCD.trim(),
-      dateOfBirth: primaryDOB.trim(),
-      gender: primaryGender ? (primaryGender as any) : undefined,
-      createdAt: now,
-      updatedAt: now,
-    };
-    savePerson(primaryPerson);
+  const onSubmit = (data: FormData) => {
+    if (data.mode === 'Lập hộ mới') {
+      for (const r of activeRoommates) {
+        if (!r.fullName.trim()) return Alert.alert('Lỗi', 'Vui lòng nhập tên cho tất cả người ở ghép đã chọn.');
+        if (r.nationalId && r.nationalId.length !== 12) return Alert.alert('Lỗi', `CCCD của ${r.fullName} phải đủ 12 số.`);
+      }
 
-    // 2. Create Roommates
-    const roommateIds: string[] = [];
-    activeRoommates.forEach(r => {
-      const p: Person = {
-        id: generateId(),
-        fullName: r.fullName.trim(),
-        nationalId: r.nationalId.trim(),
-        dateOfBirth: r.dateOfBirth.trim(),
-        gender: r.gender ? (r.gender as any) : undefined,
-        relationshipToHouseholder: r.relationshipToHouseholder.trim(),
+      const now = Date.now();
+      const primaryId = generateId();
+      const primaryPerson: Person = {
+        id: primaryId,
+        fullName: data.primaryName.trim(),
+        phone: data.primaryPhone?.trim(),
+        nationalId: data.primaryCCCD?.trim(),
+        dateOfBirth: data.primaryDOB?.trim(),
+        gender: data.primaryGender ? (data.primaryGender as any) : undefined,
         createdAt: now,
         updatedAt: now,
       };
-      savePerson(p);
-      roommateIds.push(p.id);
-    });
+      savePerson(primaryPerson);
 
-    // 3. Create Contract
-    const newContract: Contract = {
-      id: generateId(),
-      propertyId: selectedPropertyId,
-      landlordPersonId: 'owner',
-      tenantPersonIds: [primaryId, ...roommateIds],
-      type: 'Rental',
-      startDate,
-      contractStatus: 'Active',
-      createdAt: now,
-      updatedAt: now,
-    };
-    saveContract(newContract);
+      const roommateIds: string[] = [];
+      activeRoommates.forEach(r => {
+        const p: Person = {
+          id: generateId(),
+          fullName: r.fullName.trim(),
+          nationalId: r.nationalId.trim(),
+          dateOfBirth: r.dateOfBirth.trim(),
+          gender: r.gender ? (r.gender as any) : undefined,
+          relationshipToHouseholder: r.relationshipToHouseholder.trim(),
+          createdAt: now,
+          updatedAt: now,
+        };
+        savePerson(p);
+        roommateIds.push(p.id);
+      });
 
-    Alert.alert('Thành công', 'Đã lưu hồ sơ khách thuê và tạo hợp đồng!', [
-      { text: 'OK', onPress: () => navigation.navigate('ContractsTab') }
-    ]);
+      const newContract: Contract = {
+        id: generateId(),
+        propertyId: data.propertyId!,
+        landlordPersonId: 'owner',
+        tenantPersonIds: [primaryId, ...roommateIds],
+        type: 'Rental',
+        startDate: data.startDate,
+        contractStatus: 'Active',
+        createdAt: now,
+        updatedAt: now,
+      };
+      saveContract(newContract);
+
+      Alert.alert('Thành công', 'Đã lưu hồ sơ khách thuê và tạo hợp đồng!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } else {
+      // Vào hộ đã có
+      const selectedGroup = rentalGroups.find(g => g.id === data.contractId);
+      if (!selectedGroup) return Alert.alert('Lỗi', 'Không tìm thấy hộ đã chọn.');
+      
+      // Validation limit (max 5 people per household: 1 primary + 4 roommates)
+      if (selectedGroup.currentTenantCount >= 5) {
+        return Alert.alert('Thất bại', 'Số lượng cho phép ở ghép đã vượt quá giới hạn (Tối đa 5 người/phòng).');
+      }
+
+      const now = Date.now();
+      const newPersonId = generateId();
+      const newPerson: Person = {
+        id: newPersonId,
+        fullName: data.primaryName.trim(),
+        phone: data.primaryPhone?.trim(),
+        nationalId: data.primaryCCCD?.trim(),
+        dateOfBirth: data.primaryDOB?.trim(),
+        gender: data.primaryGender ? (data.primaryGender as any) : undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+      savePerson(newPerson);
+
+      // Update existing contract to add new person
+      const updatedContract: Contract = {
+        ...selectedGroup.contract,
+        tenantPersonIds: [...selectedGroup.contract.tenantPersonIds, newPersonId],
+        updatedAt: now,
+      };
+      saveContract(updatedContract);
+
+      Alert.alert('Thành công', `Đã thêm ${newPerson.fullName} vào hộ ${selectedGroup.householderName}!`, [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    }
   };
 
   return (
@@ -114,59 +201,149 @@ export const AddRentalRecordScreen = observer(() => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Icon name="chevron-left" size={24} color={Theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Đăng ký Khách thuê mới</Text>
+        <Text style={styles.headerTitle}>Hồ sơ thuê nhà</Text>
         <View style={{ width: 40 }} />
+      </View>
+
+      {/* Mode Toggle */}
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity 
+          style={[styles.toggleButton, mode === 'Lập hộ mới' && styles.toggleButtonActive]} 
+          onPress={() => setValue('mode', 'Lập hộ mới')}
+        >
+          <Text style={[styles.toggleText, mode === 'Lập hộ mới' && styles.toggleTextActive]}>Lập hộ mới</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.toggleButton, mode === 'Vào hộ đã có' && styles.toggleButtonActive]} 
+          onPress={() => setValue('mode', 'Vào hộ đã có')}
+        >
+          <Text style={[styles.toggleText, mode === 'Vào hộ đã có' && styles.toggleTextActive]}>Vào hộ đã có</Text>
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           
-          {/* Section 1: Room */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>1. Chọn Nhà/Phòng</Text>
-            {properties.length === 0 ? (
-              <Text style={styles.warningText}>Chưa có Nhà/Phòng. Hãy vào tab Nhà/Phòng để thêm trước.</Text>
-            ) : !selectedPropertyId ? (
-              <TouchableOpacity style={styles.textButton} onPress={() => setShowPropertyModal(true)}>
-                <Icon name="search" size={20} color={Theme.colors.primary} />
-                <Text style={styles.textButtonLabel}>Nhấn để chọn phòng</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.selectedPropertyContainer}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <Icon name="home" size={24} color={Theme.colors.primary} />
-                  <Text style={styles.selectedPropertyText}>
-                    {properties.find(p => p.id === selectedPropertyId)?.title}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => setShowPropertyModal(true)}>
-                  <Text style={styles.addText}>Thay đổi</Text>
+          {mode === 'Lập hộ mới' ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>1. Chọn Nhà/Phòng *</Text>
+              {properties.length === 0 ? (
+                <Text style={styles.warningText}>Chưa có Nhà/Phòng. Hãy vào tab Nhà/Phòng để thêm trước.</Text>
+              ) : !selectedPropertyId ? (
+                <TouchableOpacity style={styles.textButton} onPress={() => setShowPropertyModal(true)}>
+                  <Icon name="search" size={20} color={Theme.colors.primary} />
+                  <Text style={styles.textButtonLabel}>Nhấn để chọn phòng</Text>
                 </TouchableOpacity>
-              </View>
-            )}
-          </View>
+              ) : (
+                <View style={[styles.selectedPropertyContainer, errors.propertyId && styles.inputError]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <Icon name="home" size={24} color={Theme.colors.primary} />
+                    <Text style={styles.selectedPropertyText}>
+                      {properties.find(p => p.id === selectedPropertyId)?.title}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setShowPropertyModal(true)}>
+                    <Text style={styles.addText}>Thay đổi</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {errors.propertyId && <Text style={styles.errorText}>{errors.propertyId.message}</Text>}
+            </View>
+          ) : (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>1. Chọn Hộ gia đình (Phòng) *</Text>
+              {rentalGroups.length === 0 ? (
+                <Text style={styles.warningText}>Chưa có hộ gia đình nào đang thuê.</Text>
+              ) : !selectedContractId ? (
+                <TouchableOpacity style={styles.textButton} onPress={() => setShowGroupModal(true)}>
+                  <Icon name="user" size={20} color={Theme.colors.primary} />
+                  <Text style={styles.textButtonLabel}>Nhấn để chọn hộ gia đình</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={[styles.selectedPropertyContainer, errors.contractId && styles.inputError]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <Icon name="user" size={24} color={Theme.colors.primary} />
+                    <View style={{ marginLeft: 12 }}>
+                      <Text style={[styles.selectedPropertyText, { marginLeft: 0 }]}>
+                        {rentalGroups.find(g => g.id === selectedContractId)?.propertyTitle}
+                      </Text>
+                      <Text style={{ fontSize: 13, color: Theme.colors.textSecondary }}>
+                        Chủ hộ: {rentalGroups.find(g => g.id === selectedContractId)?.householderName}
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={() => setShowGroupModal(true)}>
+                    <Text style={styles.addText}>Thay đổi</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {errors.contractId && <Text style={styles.errorText}>{errors.contractId.message}</Text>}
+            </View>
+          )}
 
-          {/* Section 2: Primary Tenant */}
+          {/* Section 2: Personal Info */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>2. Chủ hộ (Người đứng tên)</Text>
+            <Text style={styles.sectionTitle}>{mode === 'Lập hộ mới' ? '2. Chủ hộ (Người đứng tên)' : '2. Thông tin Người mới'}</Text>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Họ và tên *</Text>
-              <TextInput style={styles.input} value={primaryName} onChangeText={setPrimaryName} placeholder="Nhập họ tên đầy đủ" />
+              <Controller
+                control={control}
+                name="primaryName"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={[styles.input, errors.primaryName && styles.inputError]}
+                    placeholder="Nhập họ tên đầy đủ"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
+              />
+              {errors.primaryName && <Text style={styles.errorText}>{errors.primaryName.message}</Text>}
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Số điện thoại</Text>
-              <TextInput style={styles.input} value={primaryPhone} onChangeText={setPrimaryPhone} placeholder="Nhập SĐT" keyboardType="phone-pad" />
+              <Controller
+                control={control}
+                name="primaryPhone"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={[styles.input, errors.primaryPhone && styles.inputError]}
+                    placeholder="Nhập SĐT"
+                    keyboardType="phone-pad"
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
+              />
+              {errors.primaryPhone && <Text style={styles.errorText}>{errors.primaryPhone.message}</Text>}
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Số CCCD (12 số)</Text>
-              <TextInput style={styles.input} value={primaryCCCD} onChangeText={setPrimaryCCCD} placeholder="Nhập CCCD" keyboardType="number-pad" maxLength={12} />
+              <Controller
+                control={control}
+                name="primaryCCCD"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={[styles.input, errors.primaryCCCD && styles.inputError]}
+                    placeholder="Nhập CCCD"
+                    keyboardType="number-pad"
+                    maxLength={12}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
+              />
+              {errors.primaryCCCD && <Text style={styles.errorText}>{errors.primaryCCCD.message}</Text>}
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md }}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <Text style={styles.label}>Ngày sinh</Text>
                 <TouchableOpacity style={styles.input} onPress={() => setShowDOBPicker(true)}>
-                  <Text style={{ color: primaryDOB ? Theme.colors.text : Theme.colors.textSecondary }}>
-                    {primaryDOB || 'Chọn ngày'}
+                  <Text style={{ color: dobValue ? Theme.colors.text : Theme.colors.textSecondary }}>
+                    {dobValue || 'Chọn ngày'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -174,16 +351,16 @@ export const AddRentalRecordScreen = observer(() => {
                 <Text style={styles.label}>Giới tính</Text>
                 <View style={{ flexDirection: 'row', height: 48 }}>
                   <TouchableOpacity 
-                    style={[styles.genderButton, primaryGender === 'Male' && styles.genderButtonActive, { borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRightWidth: 0 }]}
-                    onPress={() => setPrimaryGender('Male')}
+                    style={[styles.genderButton, genderValue === 'Male' && styles.genderButtonActive, { borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRightWidth: 0 }]}
+                    onPress={() => setValue('primaryGender', 'Male')}
                   >
-                    <Text style={[styles.genderText, primaryGender === 'Male' && styles.genderTextActive]}>Nam</Text>
+                    <Text style={[styles.genderText, genderValue === 'Male' && styles.genderTextActive]}>Nam</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
-                    style={[styles.genderButton, primaryGender === 'Female' && styles.genderButtonActive, { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
-                    onPress={() => setPrimaryGender('Female')}
+                    style={[styles.genderButton, genderValue === 'Female' && styles.genderButtonActive, { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
+                    onPress={() => setValue('primaryGender', 'Female')}
                   >
-                    <Text style={[styles.genderText, primaryGender === 'Female' && styles.genderTextActive]}>Nữ</Text>
+                    <Text style={[styles.genderText, genderValue === 'Female' && styles.genderTextActive]}>Nữ</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -192,53 +369,55 @@ export const AddRentalRecordScreen = observer(() => {
 
           {showDOBPicker && (
             <DateTimePicker
-              value={primaryDOB ? moment(primaryDOB, 'DD/MM/YYYY').toDate() : new Date(1990, 0, 1)}
+              value={dobValue ? moment(dobValue, 'DD/MM/YYYY').toDate() : new Date(1990, 0, 1)}
               mode="date"
               display="default"
               positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
               negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
               onChange={(event, selectedDate) => {
                 setShowDOBPicker(false);
-                if (selectedDate) setPrimaryDOB(moment(selectedDate).format('DD/MM/YYYY'));
+                if (selectedDate) setValue('primaryDOB', moment(selectedDate).format('DD/MM/YYYY'));
               }}
             />
           )}
 
-          {/* Section 3: Roommates (Navigate to specific screen) */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>3. Người Ở Ghép ({activeRoommates.length}/4)</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('AddRoommates')}>
-                <Text style={styles.addText}>Chỉnh sửa</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {activeRoommates.map((r, idx) => (
-              <View key={idx} style={styles.compactRoommateItem}>
-                <Icon name="user" size={16} color={Theme.colors.textSecondary} />
-                <View style={{ marginLeft: 12, flex: 1 }}>
-                  <Text style={styles.compactRoommateName}>{r.fullName || 'Chưa nhập tên'}</Text>
-                  <Text style={styles.compactRoommateInfo}>
-                    {r.nationalId ? `CCCD: ${r.nationalId} • ` : ''}
-                    {r.relationshipToHouseholder ? r.relationshipToHouseholder : 'Cùng phòng'}
-                  </Text>
-                </View>
+          {/* Section 3: Roommates (ONLY for Lập hộ mới) */}
+          {mode === 'Lập hộ mới' && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>3. Người Ở Ghép ({activeRoommates.length}/4)</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('AddRoommates')}>
+                  <Text style={styles.addText}>Chỉnh sửa</Text>
+                </TouchableOpacity>
               </View>
-            ))}
+              
+              {activeRoommates.map((r, idx) => (
+                <View key={idx} style={styles.compactRoommateItem}>
+                  <Icon name="user" size={16} color={Theme.colors.textSecondary} />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={styles.compactRoommateName}>{r.fullName || 'Chưa nhập tên'}</Text>
+                    <Text style={styles.compactRoommateInfo}>
+                      {r.nationalId ? `CCCD: ${r.nationalId} • ` : ''}
+                      {r.relationshipToHouseholder ? r.relationshipToHouseholder : 'Cùng phòng'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
 
-            {activeRoommates.length === 0 && (
-              <Text style={styles.noteText}>Chưa có người ở ghép nào. Bấm "Chỉnh sửa" để thêm.</Text>
-            )}
-          </View>
+              {activeRoommates.length === 0 && (
+                <Text style={styles.noteText}>Chưa có người ở ghép nào. Bấm "Chỉnh sửa" để thêm.</Text>
+              )}
+            </View>
+          )}
 
-          {/* Section 4: Contract */}
+          {/* Section 4: Contract / Entry Date */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>4. Thông tin hợp đồng</Text>
+            <Text style={styles.sectionTitle}>{mode === 'Lập hộ mới' ? '4. Thông tin hợp đồng' : '3. Thời gian gia nhập'}</Text>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Ngày bắt đầu</Text>
+              <Text style={styles.label}>Ngày bắt đầu ở *</Text>
               <TouchableOpacity style={styles.input} onPress={() => setShowStartDatePicker(true)}>
-                <Text style={{ color: startDate ? Theme.colors.text : Theme.colors.textSecondary }}>
-                  {startDate || 'Chọn ngày'}
+                <Text style={{ color: startDateValue ? Theme.colors.text : Theme.colors.textSecondary }}>
+                  {startDateValue || 'Chọn ngày'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -246,14 +425,14 @@ export const AddRentalRecordScreen = observer(() => {
 
           {showStartDatePicker && (
             <DateTimePicker
-              value={startDate ? moment(startDate, 'DD/MM/YYYY').toDate() : new Date()}
+              value={startDateValue ? moment(startDateValue, 'DD/MM/YYYY').toDate() : new Date()}
               mode="date"
               display="default"
               positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
               negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
               onChange={(event, selectedDate) => {
                 setShowStartDatePicker(false);
-                if (selectedDate) setStartDate(moment(selectedDate).format('DD/MM/YYYY'));
+                if (selectedDate) setValue('startDate', moment(selectedDate).format('DD/MM/YYYY'));
               }}
             />
           )}
@@ -262,12 +441,12 @@ export const AddRentalRecordScreen = observer(() => {
       </KeyboardAvoidingView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.submitButton} onPress={handleSave}>
-          <Text style={styles.submitButtonText}>Lưu Hồ Sơ & Tạo Hợp Đồng</Text>
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit(onSubmit)}>
+          <Text style={styles.submitButtonText}>{mode === 'Lập hộ mới' ? 'Lưu Hồ Sơ & Tạo Hợp Đồng' : 'Thêm Người Vào Hộ'}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Property Selection Bottom Sheet Modal */}
+      {/* Property Selection Modal (Lập hộ mới) */}
       <Modal visible={showPropertyModal} transparent={true} animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.bottomSheet}>
@@ -283,7 +462,7 @@ export const AddRentalRecordScreen = observer(() => {
                   key={p.id} 
                   style={[styles.selectionItem, selectedPropertyId === p.id && styles.selectionItemActive]}
                   onPress={() => {
-                    setSelectedPropertyId(p.id);
+                    setValue('propertyId', p.id);
                     setShowPropertyModal(false);
                   }}
                 >
@@ -291,6 +470,43 @@ export const AddRentalRecordScreen = observer(() => {
                   <Text style={[styles.selectionText, selectedPropertyId === p.id && styles.selectionTextActive]}>{p.title}</Text>
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Group Selection Modal (Vào hộ đã có) */}
+      <Modal visible={showGroupModal} transparent={true} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.bottomSheet}>
+            <View style={styles.bottomSheetHeader}>
+              <Text style={styles.bottomSheetTitle}>Chọn Hộ gia đình</Text>
+              <TouchableOpacity onPress={() => setShowGroupModal(false)}>
+                <Text style={{ color: Theme.colors.textSecondary, fontWeight: 'bold' }}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {rentalGroups.map(g => (
+                <TouchableOpacity 
+                  key={g.id} 
+                  style={[styles.selectionItem, selectedContractId === g.id && styles.selectionItemActive]}
+                  onPress={() => {
+                    setValue('contractId', g.id);
+                    setShowGroupModal(false);
+                  }}
+                >
+                  <Icon name="user" size={20} color={selectedContractId === g.id ? Theme.colors.primary : Theme.colors.textSecondary} />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={[styles.selectionText, { marginLeft: 0 }, selectedContractId === g.id && styles.selectionTextActive]}>{g.propertyTitle}</Text>
+                    <Text style={{ fontSize: 13, color: selectedContractId === g.id ? Theme.colors.primaryDark : Theme.colors.textSecondary, marginTop: 4 }}>
+                      Chủ hộ: {g.householderName} • Hiện có: {g.currentTenantCount} người
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              {rentalGroups.length === 0 && (
+                <Text style={{ textAlign: 'center', color: Theme.colors.textSecondary, marginTop: 20 }}>Không có hộ nào đang thuê.</Text>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -305,6 +521,11 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Theme.spacing.md, paddingVertical: Theme.spacing.md, backgroundColor: Theme.colors.surface, borderBottomWidth: 1, borderBottomColor: Theme.colors.border },
   backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: Theme.typography.size.subtitle, fontWeight: 'bold', color: Theme.colors.text },
+  toggleContainer: { flexDirection: 'row', padding: Theme.spacing.md, backgroundColor: Theme.colors.surface },
+  toggleButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  toggleButtonActive: { borderBottomColor: Theme.colors.primary },
+  toggleText: { fontSize: Theme.typography.size.body, color: Theme.colors.textSecondary, fontWeight: '500' },
+  toggleTextActive: { color: Theme.colors.primary, fontWeight: 'bold' },
   scrollContent: { padding: Theme.spacing.lg },
   section: { backgroundColor: Theme.colors.surface, padding: Theme.spacing.lg, borderRadius: Theme.borderRadius.md, marginBottom: Theme.spacing.xl, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Theme.spacing.lg },
@@ -319,6 +540,8 @@ const styles = StyleSheet.create({
   inputGroup: { marginBottom: Theme.spacing.md },
   label: { fontSize: Theme.typography.size.small, color: Theme.colors.textSecondary, marginBottom: 6, fontWeight: '500' },
   input: { borderWidth: 1, borderColor: Theme.colors.border, borderRadius: Theme.borderRadius.md, paddingHorizontal: Theme.spacing.md, paddingVertical: 12, height: 48, justifyContent: 'center', fontSize: Theme.typography.size.small, color: Theme.colors.text, backgroundColor: Theme.colors.background },
+  inputError: { borderColor: Theme.colors.danger },
+  errorText: { color: Theme.colors.danger, fontSize: 12, marginTop: 4 },
   genderButton: { flex: 1, borderWidth: 1, borderColor: Theme.colors.border, justifyContent: 'center', alignItems: 'center', backgroundColor: Theme.colors.background, borderRadius: Theme.borderRadius.md },
   genderButtonActive: { backgroundColor: Theme.colors.primaryLight, borderColor: Theme.colors.primary },
   genderText: { color: Theme.colors.textSecondary, fontSize: Theme.typography.size.small, fontWeight: '500' },

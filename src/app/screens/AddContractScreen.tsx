@@ -16,6 +16,8 @@ export function AddContractScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const initialGroupId = route.params?.initialGroupId;
+  const draftPropertyId = route.params?.draftPropertyId;
+  const draftTenantIds = route.params?.draftTenantIds;
   const initialContractType = route.params?.initialContractType || 'Đăng ký tạm trú';
   const terminateContractId = route.params?.terminateContractId;
   
@@ -66,7 +68,22 @@ export function AddContractScreen() {
     return rentalGroups.filter(g => g.searchString.includes(lowerQ));
   }, [rentalGroups, searchQuery]);
 
-  const selectedGroup = rentalGroups.find(g => g.id === selectedGroupId);
+  const selectedGroup = useMemo(() => {
+    if (draftPropertyId && draftTenantIds) {
+      const property = properties.find(p => p.id === draftPropertyId);
+      const primaryTenant = people.find(p => p.id === draftTenantIds[0]);
+      const roommates = people.filter(p => draftTenantIds.slice(1).includes(p.id));
+      return {
+        id: 'draft',
+        sourceContract: { tenantPersonIds: draftTenantIds } as any,
+        property,
+        primaryTenant,
+        roommates,
+        searchString: ''
+      };
+    }
+    return rentalGroups.find(g => g.id === selectedGroupId);
+  }, [rentalGroups, selectedGroupId, draftPropertyId, draftTenantIds, properties, people]);
 
   const handleSave = () => {
     if (!selectedGroup) {
@@ -149,7 +166,10 @@ export function AddContractScreen() {
             <Text style={styles.sectionTitle}>1. Chọn Hồ sơ (Chủ hộ & Phòng)</Text>
             
             {!selectedGroup ? (
-              <TouchableOpacity style={styles.textButton} onPress={() => setShowGroupModal(true)}>
+              <TouchableOpacity style={styles.textButton} onPress={() => {
+                if (draftPropertyId) return; // Disable changing if draft
+                setShowGroupModal(true);
+              }}>
                 <Icon name="search" size={20} color={Theme.colors.primary} />
                 <Text style={styles.textButtonLabel}>Tìm & Chọn hồ sơ thuê</Text>
               </TouchableOpacity>
@@ -170,9 +190,11 @@ export function AddContractScreen() {
                     </Text>
                   )}
                 </View>
-                <TouchableOpacity onPress={() => setShowGroupModal(true)}>
-                  <Text style={styles.addText}>Thay đổi</Text>
-                </TouchableOpacity>
+                {!draftPropertyId && (
+                  <TouchableOpacity onPress={() => setShowGroupModal(true)}>
+                    <Text style={styles.addText}>Thay đổi</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -190,9 +212,7 @@ export function AddContractScreen() {
               
               {showTypeDropdown && (
                 <View style={styles.dropdownList}>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Rental'); setShowTypeDropdown(false); }}>
-                    <Text style={[styles.dropdownItemText, contractType === 'Rental' && styles.dropdownItemTextActive]}>Hợp đồng thuê nhà</Text>
-                  </TouchableOpacity>
+                  {/* Removed Rental option as requested */}
                   <TouchableOpacity style={styles.dropdownItem} onPress={() => { setContractType('Đăng ký tạm trú'); setShowTypeDropdown(false); }}>
                     <Text style={[styles.dropdownItemText, contractType === 'Đăng ký tạm trú' && styles.dropdownItemTextActive]}>Đăng ký tạm trú</Text>
                   </TouchableOpacity>
@@ -215,7 +235,7 @@ export function AddContractScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-              <View style={{ flex: 1, marginRight: 8 }}>
+              <View style={{ flex: 1, marginRight: contractType === 'Đăng ký tạm trú' ? 0 : 8 }}>
                 <Text style={styles.label}>Số năm</Text>
                 <TextInput 
                   style={styles.input} 
@@ -225,16 +245,18 @@ export function AddContractScreen() {
                   maxLength={2}
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Số tháng</Text>
-                <TextInput 
-                  style={styles.input} 
-                  value={durationMonths} 
-                  onChangeText={setDurationMonths} 
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
-              </View>
+              {contractType !== 'Đăng ký tạm trú' && (
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>Số tháng</Text>
+                  <TextInput 
+                    style={styles.input} 
+                    value={durationMonths} 
+                    onChangeText={setDurationMonths} 
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                </View>
+              )}
             </View>
 
             {contractType === 'Rental' && (

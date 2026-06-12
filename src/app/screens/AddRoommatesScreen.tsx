@@ -37,6 +37,7 @@ export const AddRoommatesScreen = observer(() => {
            (r.nationalId || '').trim() !== '' || 
            (r.dateOfBirth || '').trim() !== '' || 
            (r.gender || '').trim() !== '' || 
+           (r.hometown || '').trim() !== '' || 
            (r.relationshipToHouseholder || '').trim() !== '';
   };
 
@@ -49,9 +50,21 @@ export const AddRoommatesScreen = observer(() => {
           setActiveTab(i);
           return Alert.alert('Lỗi', `Người số ${i + 1} chưa nhập Họ và tên.`);
         }
-        if (r.nationalId && r.nationalId.trim().length !== 12) {
+        if (!(r.nationalId || '').trim() || r.nationalId.trim().length !== 12) {
           setActiveTab(i);
-          return Alert.alert('Lỗi', `CCCD của người số ${i + 1} phải đủ 12 số.`);
+          return Alert.alert('Lỗi', `Người số ${i + 1} chưa nhập Số CCCD hoặc không đủ 12 số.`);
+        }
+        if (!(r.dateOfBirth || '').trim()) {
+          setActiveTab(i);
+          return Alert.alert('Lỗi', `Người số ${i + 1} chưa nhập Ngày sinh.`);
+        }
+        if (!(r.gender || '').trim()) {
+          setActiveTab(i);
+          return Alert.alert('Lỗi', `Người số ${i + 1} chưa chọn Giới tính.`);
+        }
+        if (!(r.relationshipToHouseholder || '').trim()) {
+          setActiveTab(i);
+          return Alert.alert('Lỗi', `Người số ${i + 1} chưa nhập Quan hệ với chủ hộ.`);
         }
       }
     }
@@ -113,19 +126,19 @@ export const AddRoommatesScreen = observer(() => {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.formContainer}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Họ và tên *</Text>
+            <Text style={styles.label}>Họ và tên <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
             <TextInput style={styles.input} value={activeRoommate.fullName} onChangeText={v => updateField('fullName', v)} placeholder="Nhập họ tên đầy đủ" />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Số CCCD (12 số)</Text>
+            <Text style={styles.label}>Số CCCD (12 số) <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
             <TextInput style={styles.input} value={activeRoommate.nationalId} onChangeText={v => updateField('nationalId', v)} placeholder="Nhập CCCD" keyboardType="number-pad" maxLength={12} />
           </View>
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md }}>
             {/* Ngày sinh */}
             <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.label}>Ngày sinh</Text>
+              <Text style={styles.label}>Ngày sinh <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
               <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
                 <Text style={{ color: activeRoommate.dateOfBirth ? Theme.colors.text : Theme.colors.textSecondary }}>
                   {activeRoommate.dateOfBirth || 'Chọn ngày'}
@@ -135,7 +148,7 @@ export const AddRoommatesScreen = observer(() => {
 
             {/* Giới tính */}
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Giới tính</Text>
+              <Text style={styles.label}>Giới tính <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
               <View style={{ flexDirection: 'row', height: 48 }}>
                 <TouchableOpacity 
                   style={[styles.genderButton, activeRoommate.gender === 'Male' && styles.genderButtonActive, { borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRightWidth: 0 }]}
@@ -170,7 +183,12 @@ export const AddRoommatesScreen = observer(() => {
           )}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Quan hệ với chủ hộ</Text>
+            <Text style={styles.label}>Quê quán (Nếu khác chủ hộ)</Text>
+            <TextInput style={styles.input} value={activeRoommate.hometown} onChangeText={v => updateField('hometown', v)} placeholder="Nhập quê quán (địa chỉ thường trú)" />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Quan hệ với chủ hộ <Text style={{ color: Theme.colors.danger }}>*</Text></Text>
             <TextInput style={styles.input} value={activeRoommate.relationshipToHouseholder} onChangeText={v => updateField('relationshipToHouseholder', v)} placeholder="Ví dụ: Con, Vợ, Em trai" />
           </View>
 

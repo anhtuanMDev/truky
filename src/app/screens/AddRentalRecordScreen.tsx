@@ -45,6 +45,7 @@ const FormSchema = z
     primaryCCCD: CCCDSchema,
     primaryDOB: z.string().min(1, 'Vui lòng chọn ngày sinh'),
     primaryGender: z.enum(['Male', 'Female', 'Other']).optional(),
+    primaryHometown: z.string().optional(),
     startDate: z.string().min(1, 'Vui lòng chọn ngày'),
     guardianName: z.string().optional(),
     guardianCCCD: z.string().optional(),
@@ -58,6 +59,13 @@ const FormSchema = z
         code: z.ZodIssueCode.custom,
         message: 'Vui lòng chọn nhà/phòng',
         path: ['propertyId'],
+      });
+    }
+    if (data.mode === 'Lập hộ mới' && (!data.primaryHometown || data.primaryHometown.trim().length < 2)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Vui lòng nhập quê quán (địa chỉ thường trú)',
+        path: ['primaryHometown'],
       });
     }
     if (data.mode === 'Vào hộ đã có' && !data.contractId) {
@@ -144,6 +152,7 @@ export const AddRentalRecordScreen = observer(() => {
       primaryCCCD: '',
       primaryDOB: '',
       primaryGender: 'Male',
+      primaryHometown: '',
       startDate: moment().format('DD/MM/YYYY'),
       guardianName: '',
       guardianCCCD: '',
@@ -298,7 +307,8 @@ export const AddRentalRecordScreen = observer(() => {
         phone: data.primaryPhone?.trim(),
         nationalId: data.primaryCCCD?.trim(),
         dateOfBirth: data.primaryDOB?.trim(),
-        gender: data.primaryGender ? (data.primaryGender as any) : undefined,
+        gender: data.primaryGender as any,
+        permanentAddress: data.primaryHometown,
         note: noteStr,
         createdAt: now,
         updatedAt: now,
@@ -313,6 +323,7 @@ export const AddRentalRecordScreen = observer(() => {
           nationalId: r.nationalId.trim(),
           dateOfBirth: r.dateOfBirth.trim(),
           gender: r.gender ? (r.gender as any) : undefined,
+          permanentAddress: r.hometown?.trim() ? r.hometown.trim() : data.primaryHometown,
           relationshipToHouseholder: r.relationshipToHouseholder.trim(),
           createdAt: now,
           updatedAt: now,
@@ -321,25 +332,12 @@ export const AddRentalRecordScreen = observer(() => {
         roommateIds.push(p.id);
       });
 
-      const newContract: Contract = {
-        id: generateId(),
-        propertyId: data.propertyId!,
-        landlordPersonId: 'owner',
-        tenantPersonIds: [primaryId, ...roommateIds],
-        type: 'Đăng ký tạm trú',
-        startDate: data.startDate,
-        contractStatus: 'Active',
-        createdAt: now,
-        updatedAt: now,
-      };
-      saveContract(newContract);
-
       Alert.alert(
         'Thành công',
-        'Đã lưu hồ sơ tạm trú! Bạn có muốn tạo Hợp đồng thuê nhà không?',
+        'Đã lưu thông tin người thuê! Bạn có muốn tạo Hợp đồng đăng ký tạm trú không?',
         [
           {
-            text: 'Không (Chỉ tạm trú)',
+            text: 'Không',
             style: 'cancel',
             onPress: () => {
               isSubmittedRef.current = true;
@@ -347,10 +345,14 @@ export const AddRentalRecordScreen = observer(() => {
             },
           },
           {
-            text: 'Có tạo HĐ',
+            text: 'Có',
             onPress: () => {
               isSubmittedRef.current = true;
-              navigation.replace('AddContract', { initialGroupId: newContract.id, initialContractType: 'Rental' });
+              navigation.replace('AddContract', { 
+                draftPropertyId: data.propertyId, 
+                draftTenantIds: [primaryId, ...roommateIds],
+                initialContractType: 'Đăng ký tạm trú' 
+              });
             },
           },
         ],
@@ -374,6 +376,10 @@ export const AddRentalRecordScreen = observer(() => {
         );
       }
 
+      const householder = people.find(p => p.id === selectedGroup.contract.tenantPersonIds[0]);
+      const householderHometown = householder?.permanentAddress || '';
+      const finalHometown = data.primaryHometown?.trim() ? data.primaryHometown.trim() : householderHometown;
+
       const now = Date.now();
       const newPersonId = generateId();
       const newPerson: Person = {
@@ -383,6 +389,7 @@ export const AddRentalRecordScreen = observer(() => {
         nationalId: data.primaryCCCD?.trim(),
         dateOfBirth: data.primaryDOB?.trim(),
         gender: data.primaryGender ? (data.primaryGender as any) : undefined,
+        permanentAddress: finalHometown,
         createdAt: now,
         updatedAt: now,
       };
@@ -419,7 +426,7 @@ export const AddRentalRecordScreen = observer(() => {
             text: 'Có',
             onPress: () => {
               isSubmittedRef.current = true;
-              navigation.replace('AddContract', { initialGroupId: updatedContract.id, initialContractType: 'Rental' });
+              navigation.replace('AddContract', { initialGroupId: updatedContract.id, initialContractType: 'Đăng ký tạm trú' });
             },
           },
         ],
@@ -429,7 +436,7 @@ export const AddRentalRecordScreen = observer(() => {
 
   const propertiesWithStatus = useMemo(() => {
     const activeContracts = contracts.filter(
-      c => c.type === 'Rental' && c.contractStatus === 'Active',
+      c => c.contractStatus === 'Active',
     );
     return properties.map(p => {
       const activeContract = activeContracts.find(c => c.propertyId === p.id);
@@ -720,6 +727,32 @@ export const AddRentalRecordScreen = observer(() => {
               {errors.primaryCCCD && (
                 <Text style={styles.errorText}>
                   {errors.primaryCCCD.message}
+                </Text>
+              )}
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Quê quán {mode === 'Lập hộ mới' ? <Text style={{ color: Theme.colors.danger }}>*</Text> : <Text style={{ color: Theme.colors.textSecondary, fontWeight: 'normal' }}>(Nếu khác chủ hộ)</Text>}
+              </Text>
+              <Controller
+                control={control}
+                name="primaryHometown"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <TextInput
+                    style={[
+                      styles.input,
+                      errors.primaryHometown && styles.inputError,
+                    ]}
+                    placeholder={mode === 'Lập hộ mới' ? "Nhập quê quán (địa chỉ thường trú)" : "Để trống nếu cùng quê quán chủ hộ"}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    value={value}
+                  />
+                )}
+              />
+              {errors.primaryHometown && (
+                <Text style={styles.errorText}>
+                  {errors.primaryHometown.message}
                 </Text>
               )}
             </View>
@@ -1232,7 +1265,8 @@ export const AddRentalRecordScreen = observer(() => {
                     selectedPropertyId === p.id && styles.selectionItemActive,
                     p.isOccupied && { opacity: 0.5 },
                   ]}
-                  activeOpacity={p.isOccupied ? 1 : 0.7}
+                  activeOpacity={0.7}
+                  disabled={p.isOccupied}
                   onPress={() => {
                     if (p.isOccupied) return;
                     setValue('propertyId', p.id);

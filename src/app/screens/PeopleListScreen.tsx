@@ -5,35 +5,77 @@ import { useNavigation } from '@react-navigation/native';
 import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
 import { usePeople } from '../../hooks/usePeople';
+import { useContracts } from '../../hooks/useContracts';
+import { useProperties } from '../../hooks/useProperties';
 import { Person } from '../../domain/models/types';
 
 export function PeopleListScreen() {
   const { people } = usePeople();
+  const { contracts } = useContracts();
+  const { properties } = useProperties();
   const navigation = useNavigation<any>();
 
-  const renderItem = ({ item }: { item: Person }) => (
-    <TouchableOpacity 
-      style={styles.card} 
-      activeOpacity={0.7}
-      onPress={() => navigation.navigate('PersonDetails', { personId: item.id })}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.name}>{item.fullName}</Text>
-      </View>
-      {item.phone && (
-        <View style={styles.infoRow}>
-          <Icon name="user" size={16} color={Theme.colors.textSecondary} />
-          <Text style={styles.infoText}>{item.phone}</Text>
+  const renderItem = ({ item }: { item: Person }) => {
+    const activeContracts = contracts.filter(
+      c => c.contractStatus === 'Active' && c.tenantPersonIds.includes(item.id)
+    );
+    activeContracts.sort((a, b) => b.createdAt - a.createdAt);
+    const currentContract = activeContracts.length > 0 ? activeContracts[0] : null;
+
+    let roomName = 'Chưa xếp phòng';
+    let householderInfo = '';
+
+    if (currentContract) {
+      const property = properties.find(p => p.id === currentContract.propertyId);
+      if (property) roomName = property.title;
+
+      if (currentContract.tenantPersonIds[0] === item.id) {
+        householderInfo = 'Bản thân';
+      } else {
+        const householder = people.find(p => p.id === currentContract.tenantPersonIds[0]);
+        householderInfo = householder ? householder.fullName : 'Không rõ';
+      }
+    }
+
+    return (
+      <TouchableOpacity 
+        style={styles.card} 
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('PersonDetails', { personId: item.id })}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={styles.name}>{item.fullName}</Text>
         </View>
-      )}
-      {item.nationalId && (
+        
         <View style={styles.infoRow}>
-          <Icon name="file-text" size={16} color={Theme.colors.textSecondary} />
-          <Text style={styles.infoText}>CCCD: {item.nationalId}</Text>
+          <Icon name="home" size={16} color={Theme.colors.primary} />
+          <Text style={[styles.infoText, { color: Theme.colors.primary, fontWeight: '500' }]}>
+            Phòng: {roomName}
+          </Text>
         </View>
-      )}
-    </TouchableOpacity>
-  );
+        
+        {currentContract && (
+          <View style={styles.infoRow}>
+            <Icon name="user" size={16} color={Theme.colors.textSecondary} />
+            <Text style={styles.infoText}>Chủ hộ: {householderInfo}</Text>
+          </View>
+        )}
+
+        {item.phone && (
+          <View style={styles.infoRow}>
+            <Icon name="user" size={16} color={Theme.colors.textSecondary} />
+            <Text style={styles.infoText}>{item.phone}</Text>
+          </View>
+        )}
+        {item.nationalId && (
+          <View style={styles.infoRow}>
+            <Icon name="file-text" size={16} color={Theme.colors.textSecondary} />
+            <Text style={styles.infoText}>CCCD: {item.nationalId}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

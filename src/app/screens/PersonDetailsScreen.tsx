@@ -5,14 +5,27 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
 import { usePerson, usePeople } from '../../hooks/usePeople';
+import { useContracts } from '../../hooks/useContracts';
+import { Person } from '../../domain/models/types';
 import moment from 'moment';
 
 export function PersonDetailsScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { deletePerson } = usePeople();
+  const { deletePerson, people } = usePeople();
+  const { contracts } = useContracts();
   const personId = route.params?.personId;
   const person = usePerson(personId);
+
+  // Find active contract
+  const activeContracts = contracts.filter(c => c.contractStatus === 'Active' && c.tenantPersonIds.includes(personId));
+  activeContracts.sort((a, b) => b.createdAt - a.createdAt);
+  const currentContract = activeContracts.length > 0 ? activeContracts[0] : null;
+
+  // Find roommates
+  const roommates = currentContract 
+    ? people.filter(p => currentContract.tenantPersonIds.includes(p.id) && p.id !== personId)
+    : [];
 
   if (!person) {
     return (
@@ -97,6 +110,31 @@ export function PersonDetailsScreen() {
               <Text style={styles.infoValue}>{moment(person.createdAt).format('DD/MM/YYYY HH:mm')}</Text>
             </View>
           </View>
+
+          {roommates.length > 0 && (
+            <View style={styles.infoSection}>
+              <Text style={styles.sectionTitle}>Người ở chung ({roommates.length})</Text>
+              {roommates.map((r, index) => (
+                <React.Fragment key={r.id}>
+                  <TouchableOpacity 
+                    style={styles.roommateRow}
+                    onPress={() => navigation.push('PersonDetails', { personId: r.id })}
+                  >
+                    <View style={styles.roommateInfo}>
+                      <Icon name="user" size={16} color={Theme.colors.primary} />
+                      <Text style={styles.roommateName}>{r.fullName}</Text>
+                      {currentContract?.tenantPersonIds[0] === r.id && (
+                        <View style={styles.householderBadge}>
+                          <Text style={styles.householderBadgeText}>Chủ hộ</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                  {index < roommates.length - 1 && <View style={styles.divider} />}
+                </React.Fragment>
+              ))}
+            </View>
+          )}
         </View>
 
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
@@ -209,6 +247,34 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Theme.colors.border,
     marginVertical: 4,
+  },
+  roommateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Theme.spacing.sm,
+  },
+  roommateInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  roommateName: {
+    marginLeft: Theme.spacing.sm,
+    fontSize: Theme.typography.size.body,
+    color: Theme.colors.text,
+    fontWeight: '500',
+  },
+  householderBadge: {
+    marginLeft: Theme.spacing.sm,
+    backgroundColor: Theme.colors.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  householderBadgeText: {
+    fontSize: 10,
+    color: Theme.colors.primaryDark,
+    fontWeight: 'bold',
   },
   deleteButton: {
     backgroundColor: Theme.colors.dangerLight,

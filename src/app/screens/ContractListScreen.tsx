@@ -67,26 +67,28 @@ export function ContractListScreen() {
         </TouchableOpacity>
       </View>
 
-      <View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
-          <TouchableOpacity 
-            style={[styles.filterChip, selectedPropertyId === null && styles.filterChipActive]}
-            onPress={() => setSelectedPropertyId(null)}
-          >
-            <Text style={[styles.filterText, selectedPropertyId === null && styles.filterTextActive]}>Tất cả</Text>
-          </TouchableOpacity>
-          
-          {availableProperties.map(p => (
+      {contracts.length > 0 && (
+        <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
             <TouchableOpacity 
-              key={p.id}
-              style={[styles.filterChip, selectedPropertyId === p.id && styles.filterChipActive]}
-              onPress={() => setSelectedPropertyId(p.id)}
+              style={[styles.filterChip, selectedPropertyId === null && styles.filterChipActive]}
+              onPress={() => setSelectedPropertyId(null)}
             >
-              <Text style={[styles.filterText, selectedPropertyId === p.id && styles.filterTextActive]}>{p.title}</Text>
+              <Text style={[styles.filterText, selectedPropertyId === null && styles.filterTextActive]}>Tất cả</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+            
+            {availableProperties.map(p => (
+              <TouchableOpacity 
+                key={p.id}
+                style={[styles.filterChip, selectedPropertyId === p.id && styles.filterChipActive]}
+                onPress={() => setSelectedPropertyId(p.id)}
+              >
+                <Text style={[styles.filterText, selectedPropertyId === p.id && styles.filterTextActive]}>{p.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <FlatList
         data={filteredContracts}

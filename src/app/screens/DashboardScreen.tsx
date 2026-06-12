@@ -58,15 +58,22 @@ export function DashboardScreen() {
   const notifications = useMemo(() => {
     const pendingList: any[] = [];
     for (const p of properties) {
-      const propertyContracts = contracts.filter(c => c.propertyId === p.id && c.type === 'Rental');
+      const propertyContracts = contracts.filter(
+        c => c.propertyId === p.id && c.contractStatus === 'Active',
+      );
       if (propertyContracts.length > 0) {
-        propertyContracts.sort((a, b) => b.createdAt - a.createdAt);
-        const latestContract = propertyContracts[0];
-        if (latestContract.contractStatus === 'Active' && !latestContract.releaseDate) {
+        // Find the latest temporary residence registration contract
+        const dangKyContracts = propertyContracts.filter(
+          c => c.type === 'Đăng ký tạm trú',
+        );
+        dangKyContracts.sort((a, b) => b.createdAt - a.createdAt);
+        const latestContract =
+          dangKyContracts.length > 0 ? dangKyContracts[0] : null;
+        if (latestContract && !latestContract.releaseDate) {
           pendingList.push({
             id: `pending_${latestContract.id}`,
             message: `Phòng ${p.title} chưa có ngày hẹn trả hợp đồng đăng ký tạm trú (DVC)`,
-            type: 'warning' as const
+            type: 'warning' as const,
           });
         }
       }
@@ -156,7 +163,11 @@ export function DashboardScreen() {
                   <TouchableOpacity
                     key={p.id}
                     style={styles.resultItem}
-                    onPress={() => navigation.navigate('PropertyDetails', { propertyId: p.id })}
+                    onPress={() =>
+                      navigation.navigate('PropertyDetails', {
+                        propertyId: p.id,
+                      })
+                    }
                   >
                     <Icon name="home" size={16} color={Theme.colors.success} />
                     <View style={styles.resultTextContainer}>
@@ -189,7 +200,9 @@ export function DashboardScreen() {
                       color={Theme.colors.text}
                     />
                     <View style={styles.resultTextContainer}>
-                      <Text style={styles.resultTitle}>Hợp đồng {c.type === 'Rental' ? 'Thuê nhà' : c.type}</Text>
+                      <Text style={styles.resultTitle}>
+                        Hợp đồng {c.type === 'Rental' ? 'Thuê nhà' : c.type}
+                      </Text>
                       <Text style={styles.resultSubtitle}>
                         Mã cổng: {c.govContractId || 'Chưa ĐK'}
                       </Text>
@@ -226,7 +239,14 @@ export function DashboardScreen() {
               <View style={{ width: Theme.spacing.md }} />
               <StatCard
                 title="Phòng trống"
-                value={`${properties.length - new Set(contracts.filter(c => c.contractStatus === 'Active').map(c => c.propertyId)).size}/${properties.length}`}
+                value={`${
+                  properties.length -
+                  new Set(
+                    contracts
+                      .filter(c => c.contractStatus === 'Active')
+                      .map(c => c.propertyId),
+                  ).size
+                }/${properties.length}`}
                 icon="home"
                 color={Theme.colors.success}
                 bgColor={Theme.colors.successLight}
@@ -253,7 +273,6 @@ export function DashboardScreen() {
           </>
         )}
       </ScrollView>
-
     </SafeAreaView>
   );
 }

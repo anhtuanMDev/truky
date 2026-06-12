@@ -49,7 +49,20 @@ export function SettingsScreen() {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Quản lý dữ liệu (Ngoại tuyến)</Text>
+        <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
+        
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('OwnerProfile')}>
+          <View style={styles.menuIconBox}>
+            <Icon name="user" size={20} color={Theme.colors.primary} />
+          </View>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Hồ sơ Chủ nhà (Bên A)</Text>
+            <Text style={styles.menuSubtitle}>Dùng để tự động điền vào Hợp đồng</Text>
+          </View>
+          <Icon name="chevron-left" size={20} color={Theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
+        </TouchableOpacity>
+
+        <Text style={[styles.sectionTitle, { marginTop: Theme.spacing.lg }]}>Quản lý dữ liệu (Ngoại tuyến)</Text>
         
         <TouchableOpacity style={styles.menuItem} onPress={handleBackup} disabled={isProcessing}>
           <View style={styles.menuIconBox}>

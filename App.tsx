@@ -46,7 +46,7 @@ function App() {
         <BottomSheetModalProvider>
           <StatusBar
             barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-            backgroundColor={Theme.colors.background}
+            backgroundColor={Theme.colors.surface}
           />
           <RootNavigator />
         </BottomSheetModalProvider>

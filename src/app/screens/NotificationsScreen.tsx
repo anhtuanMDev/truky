@@ -17,11 +17,13 @@ export function NotificationsScreen() {
   const notifications = React.useMemo(() => {
     const pendingList: any[] = [];
     for (const p of properties) {
-      const propertyContracts = contracts.filter(c => c.propertyId === p.id && c.type === 'Rental');
+      const propertyContracts = contracts.filter(c => c.propertyId === p.id && c.contractStatus === 'Active');
       if (propertyContracts.length > 0) {
-        propertyContracts.sort((a, b) => b.createdAt - a.createdAt);
-        const latestContract = propertyContracts[0];
-        if (latestContract.contractStatus === 'Active' && !latestContract.releaseDate) {
+        // Find the latest temporary residence registration contract
+        const dangKyContracts = propertyContracts.filter(c => c.type === 'Đăng ký tạm trú');
+        dangKyContracts.sort((a, b) => b.createdAt - a.createdAt);
+        const latestContract = dangKyContracts.length > 0 ? dangKyContracts[0] : null;
+        if (latestContract && !latestContract.releaseDate) {
           pendingList.push({
             id: `pending_${latestContract.id}`,
             message: `Phòng ${p.title} chưa có ngày hẹn trả kết quả đăng ký tạm trú (DVC).`,

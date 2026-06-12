@@ -76,7 +76,14 @@ export function PersonDetailsScreen() {
             <View style={styles.avatar}>
               <Icon name="user" size={40} color={Theme.colors.primary} />
             </View>
-            <Text style={styles.name}>{person.fullName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <Text style={[styles.name, { marginBottom: 0 }]}>{person.fullName}</Text>
+              {currentContract?.tenantPersonIds[0] === person.id && (
+                <View style={[styles.householderBadge, { marginLeft: 8 }]}>
+                  <Text style={styles.householderBadgeText}>Chủ hộ</Text>
+                </View>
+              )}
+            </View>
             {person.phone && <Text style={styles.subtitle}>{person.phone}</Text>}
           </View>
 

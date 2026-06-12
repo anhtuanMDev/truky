@@ -45,21 +45,18 @@ export function PeopleListScreen() {
       >
         <View style={styles.cardHeader}>
           <Text style={styles.name}>{item.fullName}</Text>
+          {currentContract?.tenantPersonIds[0] === item.id && (
+            <View style={styles.householderBadge}>
+              <Text style={styles.householderBadgeText}>Chủ hộ</Text>
+            </View>
+          )}
         </View>
-        
         <View style={styles.infoRow}>
           <Icon name="home" size={16} color={Theme.colors.primary} />
           <Text style={[styles.infoText, { color: Theme.colors.primary, fontWeight: '500' }]}>
             Phòng: {roomName}
           </Text>
         </View>
-        
-        {currentContract && (
-          <View style={styles.infoRow}>
-            <Icon name="user" size={16} color={Theme.colors.textSecondary} />
-            <Text style={styles.infoText}>Chủ hộ: {householderInfo}</Text>
-          </View>
-        )}
 
         {item.phone && (
           <View style={styles.infoRow}>
@@ -67,10 +64,24 @@ export function PeopleListScreen() {
             <Text style={styles.infoText}>{item.phone}</Text>
           </View>
         )}
-        {item.nationalId && (
+
+        {(item.nationalId || (currentContract && currentContract.tenantPersonIds[0] !== item.id)) && (
           <View style={styles.infoRow}>
-            <Icon name="file-text" size={16} color={Theme.colors.textSecondary} />
-            <Text style={styles.infoText}>CCCD: {item.nationalId}</Text>
+            {item.nationalId && (
+              <>
+                <Icon name="file-text" size={16} color={Theme.colors.textSecondary} />
+                <Text style={styles.infoText}>CCCD: {item.nationalId}</Text>
+              </>
+            )}
+            {currentContract && currentContract.tenantPersonIds[0] !== item.id && (
+              <>
+                {item.nationalId && <Text style={{ color: Theme.colors.border, marginHorizontal: 8 }}>|</Text>}
+                <Icon name="user" size={14} color={Theme.colors.textSecondary} />
+                <Text style={[styles.infoText, { flex: 1, marginLeft: 4 }]} numberOfLines={1}>
+                  Chủ hộ: {householderInfo}
+                </Text>
+              </>
+            )}
           </View>
         )}
       </TouchableOpacity>
@@ -146,11 +157,27 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     marginBottom: Theme.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   name: {
     fontSize: Theme.typography.size.body,
     fontWeight: '600',
     color: Theme.colors.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  householderBadge: {
+    backgroundColor: Theme.colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  householderBadgeText: {
+    fontSize: 10,
+    color: Theme.colors.primaryDark,
+    fontWeight: 'bold',
   },
   infoRow: {
     flexDirection: 'row',

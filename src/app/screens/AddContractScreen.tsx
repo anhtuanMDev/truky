@@ -259,30 +259,28 @@ export function AddContractScreen() {
               )}
             </View>
 
-            {contractType === 'Rental' && (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md }}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.label}>Giá thuê (VNĐ)</Text>
-                  <TextInput 
-                    style={styles.input} 
-                    value={rentPrice} 
-                    onChangeText={setRentPrice} 
-                    keyboardType="numeric"
-                    placeholder="VD: 3000000"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Tiền cọc (VNĐ)</Text>
-                  <TextInput 
-                    style={styles.input} 
-                    value={deposit} 
-                    onChangeText={setDeposit} 
-                    keyboardType="numeric"
-                    placeholder="VD: 3000000"
-                  />
-                </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: Theme.spacing.md }}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.label}>Giá thuê (VNĐ)</Text>
+                <TextInput 
+                  style={styles.input} 
+                  value={rentPrice} 
+                  onChangeText={setRentPrice} 
+                  keyboardType="numeric"
+                  placeholder="VD: 3000000"
+                />
               </View>
-            )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Tiền cọc (VNĐ)</Text>
+                <TextInput 
+                  style={styles.input} 
+                  value={deposit} 
+                  onChangeText={setDeposit} 
+                  keyboardType="numeric"
+                  placeholder="VD: 3000000"
+                />
+              </View>
+            </View>
             
             {showDatePicker && (
               <DateTimePicker

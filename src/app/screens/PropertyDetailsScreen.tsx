@@ -143,26 +143,22 @@ export function PropertyDetailsScreen() {
                   <Text style={styles.gridLabel}>Ngày kết thúc</Text>
                   <Text style={styles.gridValue}>{activeContract.endDate || 'Chưa xác định'}</Text>
                 </View>
-                {activeContract.type === 'Rental' && (
-                  <View style={styles.gridItem}>
-                    <Text style={styles.gridLabel}>Giá thuê</Text>
-                    <Text style={[styles.gridValue, { color: Theme.colors.primary }]}>
-                      {activeContract.rentPrice ? `${activeContract.rentPrice.toLocaleString()} đ` : 'Chưa cập nhật'}
-                    </Text>
-                  </View>
-                )}
+                <View style={styles.gridItem}>
+                  <Text style={styles.gridLabel}>Giá thuê</Text>
+                  <Text style={[styles.gridValue, { color: Theme.colors.primary }]}>
+                    {activeContract.rentPrice ? `${activeContract.rentPrice.toLocaleString()} đ` : 'Chưa cập nhật'}
+                  </Text>
+                </View>
               </View>
 
-              {activeContract.type === 'Rental' && (
-                <View style={styles.grid}>
-                  <View style={styles.gridItem}>
-                    <Text style={styles.gridLabel}>Tiền cọc</Text>
-                    <Text style={styles.gridValue}>
-                      {activeContract.deposit ? `${activeContract.deposit.toLocaleString()} đ` : 'Không có'}
-                    </Text>
-                  </View>
+              <View style={styles.grid}>
+                <View style={styles.gridItem}>
+                  <Text style={styles.gridLabel}>Tiền cọc</Text>
+                  <Text style={styles.gridValue}>
+                    {activeContract.deposit ? `${activeContract.deposit.toLocaleString()} đ` : 'Không có'}
+                  </Text>
                 </View>
-              )}
+              </View>
             </View>
           </View>
         )}

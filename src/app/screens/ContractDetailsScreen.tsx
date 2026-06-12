@@ -131,6 +131,8 @@ export function ContractDetailsScreen() {
           <View style={styles.divider} />
           <Text style={styles.infoText}>Bắt đầu: {contract.startDate}</Text>
           <Text style={styles.infoText}>Trạng thái: {contract.contractStatus}</Text>
+          {contract.rentPrice ? <Text style={styles.infoText}>Giá thuê: {contract.rentPrice.toLocaleString('vi-VN')} VNĐ</Text> : null}
+          {contract.deposit ? <Text style={styles.infoText}>Tiền cọc: {contract.deposit.toLocaleString('vi-VN')} VNĐ</Text> : null}
         </View>
 
         <View style={styles.card}>

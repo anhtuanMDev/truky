@@ -8,6 +8,9 @@ import { useContract, useContracts } from '../../hooks/useContracts';
 import { useProperties } from '../../hooks/useProperties';
 import { usePeople } from '../../hooks/usePeople';
 import { CT01Mapper } from '../../domain/mappers/CT01Mapper';
+import { ContractMapper } from '../../domain/mappers/ContractMapper';
+import { generateDocx } from '../../utils/docxGenerator';
+import { CONTRACT_BASE64 } from '../../assets/templates/templatesBase64';
 
 export function ContractDetailsScreen() {
   const route = useRoute<any>();
@@ -54,6 +57,22 @@ export function ContractDetailsScreen() {
       undefined
     );
     navigation.navigate('CT01Preview', { formData });
+  };
+
+  const handleExportContract = async () => {
+    if (!contract || !property || !primaryTenant) {
+      Alert.alert('Lỗi', 'Dữ liệu không đủ để tạo Hợp đồng.');
+      return;
+    }
+    const dummyOwner = { fullName: '', dateOfBirth: '', nationalId: '', permanentAddress: '' };
+    const realOwner = people.find(p => p.id === contract.landlordPersonId);
+    const finalOwner = realOwner || dummyOwner;
+    const formData = ContractMapper.mapToForm(contract, property, finalOwner as any, tenants as any);
+
+    navigation.navigate('ContractPreview', { 
+      formData, 
+      primaryTenantName: primaryTenant.fullName 
+    });
   };
 
   const handleTerminate = () => {
@@ -177,6 +196,11 @@ export function ContractDetailsScreen() {
         <TouchableOpacity style={styles.primaryButton} onPress={handleGenerateCT01}>
           <Icon name="file-text" size={20} color="#fff" />
           <Text style={styles.primaryButtonText}> Xuất mẫu CT01 (Tạm trú)</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.primaryButton, { marginTop: 12, backgroundColor: Theme.colors.primaryDark }]} onPress={handleExportContract}>
+          <Icon name="file-text" size={20} color="#fff" />
+          <Text style={styles.primaryButtonText}> Xuất Hợp đồng thuê nhà</Text>
         </TouchableOpacity>
 
         <View style={styles.actionRow}>

@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { z } from 'zod';
 import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
@@ -35,9 +35,13 @@ const FormSchema = z.object({
 type FormData = z.infer<typeof FormSchema>;
 
 export function AddPropertyScreen() {
+  const route = useRoute<any>();
   const navigation = useNavigation();
   const { properties, saveProperty } = useProperties();
   const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  const editPropertyId = route.params?.editPropertyId;
+  const existingProperty = useMemo(() => properties.find(p => p.id === editPropertyId), [editPropertyId, properties]);
 
   const {
     control,
@@ -48,12 +52,12 @@ export function AddPropertyScreen() {
   } = useForm<FormData>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      title: '',
-      addressLine: '',
-      ward: '',
-      city: 'TP Hồ Chí Minh',
-      maxCapacity: '5',
-      note: '',
+      title: existingProperty?.title || '',
+      addressLine: existingProperty?.addressLine || '',
+      ward: existingProperty?.ward || '',
+      city: existingProperty?.city || 'TP Hồ Chí Minh',
+      maxCapacity: existingProperty?.maxCapacity?.toString() || '5',
+      note: existingProperty?.note || '',
     },
   });
 
@@ -88,10 +92,10 @@ export function AddPropertyScreen() {
     const now = Date.now();
     const newProperty: Property = {
       ...data,
-      id: generateId(),
+      id: existingProperty ? existingProperty.id : generateId(),
       fullAddress: `${data.addressLine}, ${data.ward ? data.ward + ', ' : ''}${data.city}`,
       maxCapacity: data.maxCapacity ? parseInt(data.maxCapacity, 10) : undefined,
-      createdAt: now,
+      createdAt: existingProperty ? existingProperty.createdAt : now,
       updatedAt: now,
     };
     saveProperty(newProperty);
@@ -107,7 +111,7 @@ export function AddPropertyScreen() {
         >
           <Icon name="chevron-left" size={24} color={Theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Thêm nhà/khu trọ</Text>
+        <Text style={styles.headerTitle}>{existingProperty ? 'Sửa nhà/phòng' : 'Thêm nhà/khu trọ'}</Text>
         <View style={{ width: 40 }} />
       </View>
 

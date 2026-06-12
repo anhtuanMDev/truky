@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
+import { generateDocx } from '../../utils/docxGenerator';
+import { CT01_BASE64 } from '../../assets/templates/templatesBase64';
 
 export function CT01PreviewScreen() {
   const route = useRoute<any>();
@@ -11,17 +13,22 @@ export function CT01PreviewScreen() {
   const [isExporting, setIsExporting] = useState(false);
   const { formData } = route.params;
 
-  const handleExport = () => {
+  const handleExport = async () => {
     setIsExporting(true);
-    // Simulate DOCX generation
-    setTimeout(() => {
-      setIsExporting(false);
+    try {
+      const fileName = `CT01_${formData.fullName.replace(/\s+/g, '_')}_${Date.now()}.docx`;
+      const filePath = await generateDocx(CT01_BASE64, formData, fileName);
+      
       Alert.alert(
         'Xuất file thành công',
-        `Mẫu CT01 đã được tạo thành công.\n(Tính năng giả lập cho bản Demo)`,
+        `Mẫu CT01 đã được tạo thành công tại:\n${filePath}`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
-    }, 1500);
+    } catch (error: any) {
+      Alert.alert('Lỗi', 'Không thể tạo file DOCX: ' + error.message);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -50,7 +57,7 @@ export function CT01PreviewScreen() {
             <Text style={styles.docLabel}>5. Số điện thoại liên hệ: <Text style={styles.docValue}>{formData.phone}</Text></Text>
             <Text style={styles.docLabel}>6. Email: <Text style={styles.docValue}>{formData.email}</Text></Text>
             <Text style={styles.docLabel}>7. Nơi thường trú: <Text style={styles.docValue}>{formData.permanentAddress}</Text></Text>
-            <Text style={styles.docLabel}>8. Nơi ở hiện tại: <Text style={styles.docValue}>{formData.currentAddress}</Text></Text>
+            <Text style={styles.docLabel}>8. Nơi tạm trú: <Text style={styles.docValue}>{formData.currentAddress}</Text></Text>
             <Text style={styles.docLabel}>9. Nghề nghiệp, nơi làm việc: <Text style={styles.docValue}>{formData.occupation}</Text></Text>
             <Text style={styles.docLabel}>10. Họ tên chủ hộ: <Text style={styles.docValue}>{formData.householderName}</Text></Text>
             <Text style={styles.docLabel}>11. Quan hệ với chủ hộ: <Text style={styles.docValue}>{formData.relationshipToHouseholder}</Text></Text>

@@ -1,5 +1,5 @@
 {
-  "name": "TruKy",
+  "name": "truky",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -7,7 +7,9 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "update-templates": "node -e \"const fs = require('fs'); const ct01 = fs.readFileSync('src/assets/templates/CT01.docx').toString('base64'); const contract = fs.readFileSync('src/assets/templates/contract.docx').toString('base64'); fs.writeFileSync('src/assets/templates/templatesBase64.ts', 'export const CT01_BASE64 = \\'' + ct01 + '\\';\\nexport const CONTRACT_BASE64 = \\'' + contract + '\\';\\n'); console.log('Templates updated successfully!');\"",
+    "pull-docx": "node scripts/pull-docx.js"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.14",

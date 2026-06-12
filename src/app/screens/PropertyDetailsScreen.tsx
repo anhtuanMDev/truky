@@ -50,7 +50,9 @@ export function PropertyDetailsScreen() {
           <Icon name="chevron-left" size={24} color={Theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết Nhà/Phòng</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('AddProperty', { editPropertyId: property.id })}>
+          <Text style={styles.editButtonText}>Sửa</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -176,6 +178,8 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-start' },
   headerTitle: { fontSize: Theme.typography.size.subtitle, fontWeight: 'bold', color: Theme.colors.text },
   placeholder: { width: 40 },
+  editButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-end' },
+  editButtonText: { fontSize: 16, color: Theme.colors.primary, fontWeight: 'bold' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { padding: Theme.spacing.lg },
   card: { backgroundColor: Theme.colors.surface, padding: Theme.spacing.lg, borderRadius: Theme.borderRadius.md, marginBottom: Theme.spacing.lg, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },

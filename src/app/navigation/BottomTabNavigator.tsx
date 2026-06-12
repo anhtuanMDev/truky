@@ -10,6 +10,18 @@ import { Icon } from '../../components/base/Icon';
 
 const Tab = createBottomTabNavigator();
 
+const GridIcon = ({ size, color }: { size: number, color: string }) => {
+  const boxSize = (size - 3) / 2;
+  return (
+    <View style={{ width: size, height: size, flexWrap: 'wrap', flexDirection: 'row', justifyContent: 'space-between', alignContent: 'space-between' }}>
+      <View style={{ width: boxSize, height: boxSize, borderColor: color, borderWidth: 1.5, borderRadius: 3, backgroundColor: 'transparent' }} />
+      <View style={{ width: boxSize, height: boxSize, borderColor: color, borderWidth: 1.5, borderRadius: 3, backgroundColor: 'transparent' }} />
+      <View style={{ width: boxSize, height: boxSize, borderColor: color, borderWidth: 1.5, borderRadius: 3, backgroundColor: 'transparent' }} />
+      <View style={{ width: boxSize, height: boxSize, borderColor: color, borderWidth: 1.5, borderRadius: 3, backgroundColor: 'transparent' }} />
+    </View>
+  );
+};
+
 export function BottomTabNavigator() {
   return (
     <Tab.Navigator
@@ -36,7 +48,7 @@ export function BottomTabNavigator() {
         component={DashboardScreen} 
         options={{
           tabBarLabel: 'Tổng quan',
-          tabBarIcon: ({ color }: { color: string }) => <Icon name="home" size={20} color={color} />
+          tabBarIcon: ({ color }: { color: string }) => <GridIcon size={20} color={color} />
         }}
       />
       <Tab.Screen 

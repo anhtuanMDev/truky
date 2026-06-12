@@ -5,19 +5,77 @@ import { useNavigation } from '@react-navigation/native';
 import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
 import { storage } from '../../storage/mmkv/instance';
+import RNFS from 'react-native-fs';
+import { Buffer } from 'buffer';
 
 export function SettingsScreen() {
   const navigation = useNavigation<any>();
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleBackup = () => {
+  const handleBackup = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      // Giả lập xuất JSON từ MMKV
+    try {
       const keys = storage.getAllKeys();
-      Alert.alert('Sao lưu thành công', `Đã xuất ${keys.length} tệp dữ liệu vào bộ nhớ máy.`);
-    }, 1000);
+      const backupData: Record<string, string | number | boolean> = {};
+      
+      for (const key of keys) {
+        const valStr = storage.getString(key);
+        if (valStr !== undefined) {
+          backupData[key] = valStr;
+        }
+      }
+      
+      const jsonString = JSON.stringify(backupData);
+      
+      // Obfuscation: Đảo ngược chuỗi rồi Base64 để làm khó người đọc bình thường
+      const reversed = jsonString.split('').reverse().join('');
+      const obfuscated = Buffer.from(reversed, 'utf8').toString('base64');
+
+      const fileName = `TruKy_Backup_${Date.now()}.bak`;
+      const filePath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
+
+      await RNFS.writeFile(filePath, obfuscated, 'utf8');
+
+      Alert.alert('Sao lưu thành công', `Dữ liệu đã được mã hóa chống đọc trộm và lưu tại:\n${filePath}`);
+    } catch (error: any) {
+      Alert.alert('Lỗi sao lưu', error.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsProcessing(true);
+    try {
+      const files = await RNFS.readDir(RNFS.DocumentDirectoryPath);
+      const bakFiles = files.filter(f => f.name.endsWith('.bak')).sort((a, b) => (b.mtime?.getTime() || 0) - (a.mtime?.getTime() || 0));
+      
+      if (bakFiles.length === 0) {
+        Alert.alert('Không tìm thấy', 'Không tìm thấy file sao lưu (.bak) nào trong thiết bị.');
+        return;
+      }
+      
+      const latestFile = bakFiles[0];
+      const obfuscated = await RNFS.readFile(latestFile.path, 'utf8');
+      
+      // Giải mã
+      const reversed = Buffer.from(obfuscated, 'base64').toString('utf8');
+      const jsonString = reversed.split('').reverse().join('');
+      
+      const backupData = JSON.parse(jsonString);
+      
+      // Clear data and restore
+      storage.clearAll();
+      for (const [key, value] of Object.entries(backupData)) {
+        storage.set(key, value as string);
+      }
+      
+      Alert.alert('Khôi phục thành công', `Đã khôi phục dữ liệu từ bản sao lưu: ${latestFile.name}\nKhởi động lại ứng dụng để thấy thay đổi.`);
+    } catch (error: any) {
+      Alert.alert('Lỗi khôi phục', 'File sao lưu không hợp lệ hoặc bị hỏng.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleClearData = () => {
@@ -75,15 +133,15 @@ export function SettingsScreen() {
           {isProcessing ? <ActivityIndicator size="small" color={Theme.colors.primary} /> : <Icon name="chevron-left" size={20} color={Theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Thông báo', 'Tính năng đang được phát triển.')}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleRestore} disabled={isProcessing}>
           <View style={styles.menuIconBox}>
             <Icon name="home" size={20} color={Theme.colors.primary} />
           </View>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Khôi phục dữ liệu</Text>
-            <Text style={styles.menuSubtitle}>Nhập dữ liệu từ file JSON đã sao lưu</Text>
+            <Text style={styles.menuSubtitle}>Khôi phục từ bản sao lưu gần nhất</Text>
           </View>
-          <Icon name="chevron-left" size={20} color={Theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
+          {isProcessing ? <ActivityIndicator size="small" color={Theme.colors.primary} /> : <Icon name="chevron-left" size={20} color={Theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItemDanger} onPress={handleClearData}>

@@ -47,56 +47,35 @@ export function ContractDetailsScreen() {
   const primaryTenant = tenants[0];
   const coTenants = tenants.slice(1);
 
-  const handleGenerateCT01 = () => {
-    if (!primaryTenant || !property) {
-      Alert.alert('Lỗi', 'Dữ liệu không đủ để tạo CT01.');
-      return;
-    }
-    const formData = CT01Mapper.mapToForm(
-      primaryTenant,
-      property,
-      { reason: 'Đăng ký tạm trú', authorityName: '' } as any,
-      coTenants as any,
-      undefined
-    );
-    navigation.navigate('CT01Preview', { formData });
-  };
-
-  const handleExportContract = async () => {
+  const handlePreviewDocs = (reason: string = 'Đăng ký tạm trú', hideContract: boolean = false, appAction?: 'extend' | 'terminate') => {
     if (!contract || !property || !primaryTenant) {
       Alert.alert('Lỗi', 'Dữ liệu không đủ để tạo Hợp đồng.');
       return;
     }
+    
+    // Prepare CT01 Data
+    const ct01FormData = CT01Mapper.mapToForm(
+      primaryTenant,
+      property,
+      { reason, authorityName: '' } as any,
+      coTenants as any,
+      undefined
+    );
+
+    // Prepare Contract Data
     const dummyOwner = { fullName: '', dateOfBirth: '', nationalId: '', permanentAddress: '' };
     const allOwners = people.filter(p => p.isOwner || p.id === 'owner');
     const finalOwners = allOwners.length > 0 ? allOwners : [dummyOwner];
-    const formData = ContractMapper.mapToForm(contract, property, finalOwners as any[], tenants as any[]);
+    const contractFormData = ContractMapper.mapToForm(contract, property, finalOwners as any[], tenants as any[]);
 
-    navigation.navigate('ContractPreview', { 
-      formData, 
-      primaryTenantName: primaryTenant.fullName 
+    navigation.navigate('CombinedPreview', { 
+      ct01FormData,
+      contractFormData, 
+      primaryTenantName: primaryTenant.fullName,
+      hideContract,
+      appAction,
+      contractId: contract.id
     });
-  };
-
-  const handleTerminate = () => {
-    Alert.alert(
-      'Xác nhận chấm dứt',
-      'Bạn sẽ được chuyển tới màn hình tạo Hợp đồng Xóa tạm trú. Sau khi hoàn tất tạo hợp đồng này, hợp đồng thuê hiện tại sẽ chính thức chấm dứt và phòng sẽ chuyển thành "Trống".',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Tiếp tục',
-          style: 'destructive',
-          onPress: () => {
-            navigation.navigate('AddContract', { 
-              initialGroupId: contract.id, 
-              initialContractType: 'Xóa tạm trú',
-              terminateContractId: contract.id 
-            });
-          }
-        }
-      ]
-    );
   };
 
   const startEditBonus = () => {
@@ -216,23 +195,18 @@ export function ContractDetailsScreen() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleGenerateCT01}>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => handlePreviewDocs('Đăng ký tạm trú')}>
           <Icon name="file-text" size={20} color="#fff" />
-          <Text style={styles.primaryButtonText}> Xuất mẫu CT01 (Tạm trú)</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.primaryButton, { marginTop: 12, backgroundColor: Theme.colors.primaryDark }]} onPress={handleExportContract}>
-          <Icon name="file-text" size={20} color="#fff" />
-          <Text style={styles.primaryButtonText}> Xuất Hợp đồng thuê nhà</Text>
+          <Text style={styles.primaryButtonText}> Hồ sơ đăng ký tạm trú (Xem & Xuất)</Text>
         </TouchableOpacity>
 
         <View style={styles.actionRow}>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: Theme.colors.successLight }]} onPress={() => Alert.alert('Gia hạn', 'Tính năng sao chép và gia hạn hợp đồng đang phát triển.')}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: Theme.colors.successLight }]} onPress={() => handlePreviewDocs('Gia hạn tạm trú', false, 'extend')}>
             <Icon name="file-text" size={20} color={Theme.colors.success} />
             <Text style={[styles.actionButtonText, { color: Theme.colors.success }]}> Gia hạn</Text>
           </TouchableOpacity>
           <View style={styles.actionSpacer} />
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: Theme.colors.dangerLight }]} onPress={handleTerminate}>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: Theme.colors.dangerLight }]} onPress={() => handlePreviewDocs('Xóa đăng ký tạm trú', true, 'terminate')}>
             <Icon name="chevron-left" size={20} color={Theme.colors.danger} />
             <Text style={[styles.actionButtonText, { color: Theme.colors.danger }]}> Chấm dứt</Text>
           </TouchableOpacity>

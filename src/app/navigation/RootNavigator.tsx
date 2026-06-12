@@ -9,6 +9,7 @@ import { AddContractScreen } from '../screens/AddContractScreen';
 import { ContractDetailsScreen } from '../screens/ContractDetailsScreen';
 import { CT01PreviewScreen } from '../screens/CT01PreviewScreen';
 import { ContractPreviewScreen } from '../screens/ContractPreviewScreen';
+import { CombinedPreviewScreen } from '../screens/CombinedPreviewScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AddRentalRecordScreen } from '../screens/AddRentalRecordScreen';
 import { AddRoommatesScreen } from '../screens/AddRoommatesScreen';
@@ -30,6 +31,7 @@ export function RootNavigator() {
         <Stack.Screen name="ContractDetails" component={ContractDetailsScreen} />
         <Stack.Screen name="CT01Preview" component={CT01PreviewScreen} />
         <Stack.Screen name="ContractPreview" component={ContractPreviewScreen} />
+        <Stack.Screen name="CombinedPreview" component={CombinedPreviewScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="AddRentalRecord" component={AddRentalRecordScreen} />
         <Stack.Screen name="AddRoommates" component={AddRoommatesScreen} />

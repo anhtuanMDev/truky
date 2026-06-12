@@ -438,7 +438,6 @@ type Property = {
   district?: string;
   city?: string;
   fullAddress?: string;
-  ownerPersonId?: string;
   note?: string;
   createdAt: number;
   updatedAt: number;
@@ -474,7 +473,6 @@ type Contract = {
   id: string;
   propertyId: string;
   roomId?: string;
-  landlordPersonId: string;
   tenantPersonIds: string[];
   type: string;
   startDate: string;
@@ -1037,6 +1035,28 @@ Persistence Layer
 
 - MMKV
 
+---
+
+# Current Actual State & Architecture (Updated June 2026)
+
+## Multi-Owner Support
+The application was refactored to support multiple landlords globally. 
+- The `isOwner` flag in `Person` distinguishes landlords from regular tenants.
+- Properties no longer strictly tie to a single `ownerPersonId`.
+- Contracts no longer strictly tie to a single `landlordPersonId`.
+- When generating a document (e.g., Contract or CT01), the system fetches all individuals with `isOwner = true` from the global people list and merges them together as "Bên A" (e.g., joined by "và").
+
+## Document Generation Pipeline
+When exporting a document:
+1. The app queries the domain models (Property, Contract, Tenants, and global Owners).
+2. The data passes through a Mapper (`ContractMapper` or `CT01Mapper`), flattening into key-value pairs for `docxtemplater`.
+3. Empty values are aggressively handled to output dot-placeholders (e.g., `..........`).
+4. `docxGenerator.ts` processes a Base64-encoded DOCX template, injects mapped values, and outputs a ready-to-share file.
+
+## UI/UX Refinements
+- **Date Inputs**: Standardized using `@react-native-community/datetimepicker` for DOB, release dates, etc., to prevent invalid manual input.
+- **Visual Consistency**: Status bars correctly inherit theme colors to match headers seamlessly. Custom Linear Grid Icons built via standard Views.
+
 Document Layer
 
 - DOCX Generator
@@ -1044,3 +1064,30 @@ Document Layer
 Design Principle:
 
 Local First → Fast → Offline → Lightweight → Maintainable
+
+---
+
+# Development Guidelines & Rules
+
+## 1. Cấu trúc dự án (Project Structure)
+Dự án được tổ chức theo cấu trúc Clean Architecture cơ bản để đảm bảo tính module hóa:
+- `src/app/`: Chứa Presentation Layer (UI, Navigation, Screens, Components).
+- `src/domain/`: Chứa Business Layer (Models/Types, Schema, Mappers chuẩn bị dữ liệu xuất DOCX).
+- `src/infrastructure/`: Chứa Persistence Layer (Tương tác trực tiếp MMKV, Repositories).
+- `src/hooks/`: Chứa Custom Hooks để giao tiếp với Legend State (ví dụ: `usePeople`, `useProperties`).
+- `src/constants/`: Chứa Theme (`colors`, `typography`), cấu hình chung.
+- `src/assets/`: Chứa templates `.docx`, icon font (`nanoicons`).
+
+## 2. Cách Handle Form
+- **Bắt buộc dùng `react-hook-form` + `zod`**: Mọi form nhập liệu (thêm nhà, thêm người, tạo hợp đồng) đều phải khai báo validation schema bằng `zod` và quản lý trạng thái form qua `react-hook-form` (`Controller`).
+- **Validation Rule**: Xử lý lỗi chặt chẽ, nếu thiếu thông tin bắt buộc phải hiện rõ câu thông báo (ví dụ: "Vui lòng nhập họ và tên").
+
+## 3. Cách dùng State
+- **Global / Persisted State**: Quản lý bởi `@legendapp/state`. Tuyệt đối không gọi trực tiếp store trong Component. Bắt buộc phải bọc và gọi thông qua các Custom Hooks đã dựng sẵn (vd: `const { properties, saveProperty } = useProperties()`). Legend state sẽ tự động persist xuống `MMKV`.
+- **UI State**: Các state nhỏ lẻ chỉ dùng để render UI (như `showModal`, `showDatePicker`) thì vẫn dùng `useState` thông thường trong Component.
+
+## 4. Những Nghiêm Cấm (Strict Prohibitions)
+1. **KHÔNG GỌI API NGOÀI**: Ứng dụng phải hoạt động **100% Offline** (Local-first). Cấm chèn mã gọi API, fetch data từ backend hay SDK bên thứ ba yêu cầu mạng.
+2. **KHÔNG CÀI THÊM THƯ VIỆN ICON**: Hiện tại dự án dùng font tự build qua `react-native-nano-icons`. Tuyệt đối không `npm install react-native-vector-icons` hay thư viện icon khác để tránh phình dung lượng app và conflict. Nếu cần icon mới: Tự vẽ bằng `View` thuần (ví dụ GridIcon).
+3. **KHÔNG PHÁ VỠ TÍNH TƯƠNG THÍCH DỮ LIỆU CŨ (BACKWARD COMPATIBILITY)**: Bất kỳ thay đổi nào trong Interface/Type (`src/domain/models/types.ts`) phải có giá trị mặc định/fallback do dữ liệu JSON cũ lưu trong máy người dùng (MMKV) sẽ không tự convert.
+4. **KHÔNG TÙY TIỆN ĐỔI MÀU HARDCODE**: Giao diện bắt buộc phải dùng biến màu khai báo từ `Theme.colors` (vd: `Theme.colors.primary`, `Theme.colors.surface`) thay vì hardcode mã hex (vd: `#FFF`) để hỗ trợ đồng bộ hiển thị.

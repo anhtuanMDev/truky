@@ -42,8 +42,8 @@ export class ContractMapper {
 
     let durationYears = 1;
     if (contract.startDate && contract.endDate) {
-      const start = moment(contract.startDate);
-      const end = moment(contract.endDate);
+      const start = moment(contract.startDate, 'DD/MM/YYYY');
+      const end = moment(contract.endDate, 'DD/MM/YYYY');
       const diffYears = end.diff(start, 'years', true);
       durationYears = Math.round(diffYears * 10) / 10; // Round to 1 decimal
     }

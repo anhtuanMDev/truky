@@ -106,7 +106,7 @@ export function AddContractScreen() {
     const newContract: Contract = {
       id: generateId(),
       propertyId: selectedGroup.property!.id,
-      landlordPersonId: 'owner', // Defaulting to owner for MVP
+      landlordPersonId: 'owner',
       tenantPersonIds: selectedGroup.sourceContract.tenantPersonIds,
       type: contractType,
       startDate,

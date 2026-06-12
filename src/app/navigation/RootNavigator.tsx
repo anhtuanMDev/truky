@@ -14,6 +14,7 @@ import { AddRentalRecordScreen } from '../screens/AddRentalRecordScreen';
 import { AddRoommatesScreen } from '../screens/AddRoommatesScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { OwnerProfileScreen } from '../screens/OwnerProfileScreen';
+import { OwnerListScreen } from '../screens/OwnerListScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -33,6 +34,7 @@ export function RootNavigator() {
         <Stack.Screen name="AddRentalRecord" component={AddRentalRecordScreen} />
         <Stack.Screen name="AddRoommates" component={AddRoommatesScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="OwnerList" component={OwnerListScreen} />
         <Stack.Screen name="OwnerProfile" component={OwnerProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>

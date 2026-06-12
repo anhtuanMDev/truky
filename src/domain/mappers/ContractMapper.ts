@@ -28,7 +28,7 @@ export class ContractMapper {
   static mapToForm(
     contract: Contract,
     property: Property,
-    owner: Person,
+    owners: Person[],
     tenants: Person[],
   ): ContractFormData {
     const createdAt = moment(contract.createdAt);
@@ -59,12 +59,10 @@ export class ContractMapper {
         ? contract.rentPrice.toLocaleString('vi-VN') + ' VNĐ'
         : '......................',
 
-      ownerName: owner.fullName.toUpperCase(),
-      ownerDob: owner.dateOfBirth
-        ? moment(owner.dateOfBirth, 'DD/MM/YYYY').format('YYYY')
-        : '',
-      ownerNationalId: owner.nationalId || '',
-      ownerAddress: owner.permanentAddress || '',
+      ownerName: owners.map(o => o.fullName?.toUpperCase() || '').join(' và '),
+      ownerDob: owners.map(o => o.dateOfBirth ? moment(o.dateOfBirth, 'DD/MM/YYYY').format('YYYY') : '').join(' và '),
+      ownerNationalId: owners.map(o => o.nationalId || '').join(' và '),
+      ownerAddress: owners.map(o => o.permanentAddress || '').join(' và '),
 
       tenants: sortedTenants.map((t, idx) => ({
         index: idx + 1,

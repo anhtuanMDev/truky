@@ -18,6 +18,8 @@ import { Theme } from '../../constants/theme';
 import { Icon } from '../../components/base/Icon';
 import { Property } from '../../domain/models/types';
 import { useProperties } from '../../hooks/useProperties';
+import { usePeople } from '../../hooks/usePeople';
+import { Person } from '../../domain/models/types';
 import { generateId } from '../../utils/uuid';
 
 const FormSchema = z.object({
@@ -27,6 +29,7 @@ const FormSchema = z.object({
   city: z.string().min(1, 'Vui lòng nhập tỉnh/thành phố'),
   maxCapacity: z.string().min(1, 'Vui lòng nhập sức chứa').refine(val => {
     const num = parseInt(val, 10);
+    return !isNaN(num) && num > 0;
     return !isNaN(num) && num > 0;
   }, 'Sức chứa tối đa phải lớn hơn 0'),
   note: z.string().optional(),

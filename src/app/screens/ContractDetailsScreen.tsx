@@ -11,6 +11,8 @@ import { CT01Mapper } from '../../domain/mappers/CT01Mapper';
 import { ContractMapper } from '../../domain/mappers/ContractMapper';
 import { generateDocx } from '../../utils/docxGenerator';
 import { CONTRACT_BASE64 } from '../../assets/templates/templatesBase64';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import moment from 'moment';
 
 export function ContractDetailsScreen() {
   const route = useRoute<any>();
@@ -18,6 +20,7 @@ export function ContractDetailsScreen() {
   const [isEditingBonus, setIsEditingBonus] = React.useState(false);
   const [govContractId, setGovContractId] = React.useState('');
   const [releaseDate, setReleaseDate] = React.useState('');
+  const [showDatePicker, setShowDatePicker] = React.useState(false);
 
   const { properties } = useProperties();
   const { people } = usePeople();
@@ -65,9 +68,9 @@ export function ContractDetailsScreen() {
       return;
     }
     const dummyOwner = { fullName: '', dateOfBirth: '', nationalId: '', permanentAddress: '' };
-    const realOwner = people.find(p => p.id === contract.landlordPersonId);
-    const finalOwner = realOwner || dummyOwner;
-    const formData = ContractMapper.mapToForm(contract, property, finalOwner as any, tenants as any);
+    const allOwners = people.filter(p => p.isOwner || p.id === 'owner');
+    const finalOwners = allOwners.length > 0 ? allOwners : [dummyOwner];
+    const formData = ContractMapper.mapToForm(contract, property, finalOwners as any[], tenants as any[]);
 
     navigation.navigate('ContractPreview', { 
       formData, 
@@ -158,12 +161,30 @@ export function ContractDetailsScreen() {
               </View>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Ngày trả (Ngày hẹn trả kết quả)</Text>
-                <TextInput
+                <TouchableOpacity
                   style={styles.input}
-                  value={releaseDate}
-                  onChangeText={setReleaseDate}
-                  placeholder="DD/MM/YYYY"
-                />
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={{ color: releaseDate ? Theme.colors.text : Theme.colors.textSecondary }}>
+                    {releaseDate || 'Chọn Ngày trả'}
+                  </Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={releaseDate ? moment(releaseDate, 'DD/MM/YYYY').toDate() : new Date()}
+                    mode="date"
+                    display="default"
+                    minimumDate={new Date()}
+                    positiveButton={{ label: 'Chọn', textColor: Theme.colors.primary }}
+                    negativeButton={{ label: 'Hủy', textColor: Theme.colors.textSecondary }}
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (event.type === 'set' && selectedDate) {
+                        setReleaseDate(moment(selectedDate).format('DD/MM/YYYY'));
+                      }
+                    }}
+                  />
+                )}
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 }}>
                 <TouchableOpacity onPress={() => setIsEditingBonus(false)} style={{ padding: 8, marginRight: 12 }}>

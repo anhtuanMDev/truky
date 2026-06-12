@@ -51,13 +51,13 @@ export function SettingsScreen() {
       <View style={styles.content}>
         <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
         
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('OwnerProfile')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('OwnerList')}>
           <View style={styles.menuIconBox}>
             <Icon name="user" size={20} color={Theme.colors.primary} />
           </View>
           <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>Hồ sơ Chủ nhà (Bên A)</Text>
-            <Text style={styles.menuSubtitle}>Dùng để tự động điền vào Hợp đồng</Text>
+            <Text style={styles.menuTitle}>Danh sách Chủ nhà (Bên A)</Text>
+            <Text style={styles.menuSubtitle}>Quản lý thông tin chủ sở hữu nhà/phòng</Text>
           </View>
           <Icon name="chevron-left" size={20} color={Theme.colors.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
         </TouchableOpacity>

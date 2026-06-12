@@ -11,6 +11,7 @@ export interface Person {
   occupation?: string;
   nationality?: string;
   relationshipToHouseholder?: string;
+  isOwner?: boolean;
   note?: string;
   createdAt: number;
   updatedAt: number;
@@ -24,7 +25,8 @@ export interface Property {
   city?: string;
   fullAddress?: string;
   maxCapacity?: number;
-  ownerPersonId?: string;
+  ownerPersonId?: string; // Deprecated, use ownerPersonIds
+  ownerPersonIds?: string[];
   note?: string;
   createdAt: number;
   updatedAt: number;
@@ -48,7 +50,8 @@ export interface Contract {
   id: string;
   propertyId: string;
   roomId?: string;
-  landlordPersonId: string;
+  landlordPersonId?: string; // Deprecated
+  landlordPersonIds?: string[];
   tenantPersonIds: string[];
   type: 'Rental' | 'Borrow' | 'Stay' | 'Đăng ký tạm trú' | 'Gia hạn tạm trú' | 'Xóa tạm trú' | 'Khác';
   startDate: string;
